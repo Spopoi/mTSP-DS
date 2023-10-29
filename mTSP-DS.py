@@ -1,6 +1,7 @@
 import gurobipy as gp
 from gurobipy import GRB
 from Customer import Customer
+from Truck import Truck
 
 #Parameters
 n = 10 # customers
@@ -20,12 +21,12 @@ def solve():
     for k in range(Kn): 
         x2 = model.addVar(vtype=GRB.INTEGER, name="x2")
 
-def test_Customer_class():
-    customer_prova = Customer(1,2)
-    print(customer_prova.index)
-    print(customer_prova.package_demand)
+def test_Truck_class():
+    truck = Truck(1,2)
+    print(truck.index)
+    print(truck.location)
     
 
 if __name__ == "__main__":
     solve()
-    test_Customer_class()
+    test_Truck_class()
