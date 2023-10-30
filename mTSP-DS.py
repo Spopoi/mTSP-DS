@@ -8,8 +8,8 @@ from Location import Location
 import matplotlib.pyplot as plt
 
 # Parameters
-n = 10  # customers
-m = 1  # drone stations
+n = 4  # customers
+m = 2  # drone stations
 Kn = 1  # trucks
 C = 1
 alpha = 0.5
@@ -37,10 +37,10 @@ def init():
 
 
 def plot_nodes(nodes):
+    # Todo: Spezzare i nodi e plottarli separatamente
     x_values = [node.location.x for node in nodes]
     y_values = [node.location.y for node in nodes]
 
-    # Colori diversi per Customer e DroneStation
     colors = ['blue' if isinstance(node, Customer) else 'red' for node in nodes]
 
     plt.scatter(x_values, y_values, color=colors, label="Nodes")
@@ -61,8 +61,12 @@ def plot_nodes(nodes):
 def solve():
     model = gp.Model("mTSP-DS")
 
-    # Variabili di decisione
+    # Decision variables
+    # Makespan
     tau = model.addVar(vtype=GRB.CONTINUOUS, name="tau")
+    # DS activation
+    z = model.addVars(m, vtype=GRB.INTEGER, name="z")
+    a_ik = model.addVars(Kn, vtype=GRB.CONTINUOUS, name="a_ik")
 
     for k in range(Kn):
         x2 = model.addVar(vtype=GRB.INTEGER, name="x2")
@@ -77,7 +81,7 @@ def test():
     array_droni = [drone1, drone2]
 
     # station = DroneStation(index=1, location="Station A", drones=array_droni)
-    print(station)
+    # print(station)
 
 
 if __name__ == "__main__":
