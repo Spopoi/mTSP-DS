@@ -1,16 +1,18 @@
+from Drone import Drone
+
+
 class DroneStation:
-    def __init__(self, index, location, drones):
+    def __init__(self, index, location, drone_number):
         self.index = index
         self.location = location
-        self.drones = drones  # un array di oggetti Drone
+        self.drone_number = drone_number
+        self.drones = []
+        for i in range(drone_number):
+            self.drones.append(Drone(i, location))
 
-    def print_station_info(self):
-        print(f"Station Index: {self.index}")
-        print(f"Station Location: {self.location}")
-        print("Drones:")
-        for drone in self.drones:
-            print(f"  Drone Index: {drone.index}")
-            print(f"  Drone Location: {drone.location}")
+    def __repr__(self):
+        drones_info = "\n".join([repr(drone) for drone in self.drones])
+        return f"Station Index: {self.index}\nStation Location: {self.location}\nDrones:\n{drones_info}"
 
     def get_num_drones(self):
         return len(self.drones)

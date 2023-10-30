@@ -5,7 +5,9 @@ class Customer:
         self.location = location
         self.package_demand = package_demand
 
-    def print_customer_info(self):
-        print(f"Customer index: {self.index}")
-        print(f"Customer location: {self.location}")
-        print(f"Customer package demand: {self.package_demand}")
+    def __repr__(self):
+        return (
+            f"Customer Index: {self.index}\n"
+            f"Customer Location: {self.location}\n"
+            f"Customer Package Demand: {self.package_demand}"
+        )

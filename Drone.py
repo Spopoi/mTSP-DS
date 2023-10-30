@@ -5,9 +5,10 @@ class Drone:
         self.location = location
         self.eps = eps  # max drone distance
 
-    def print_drone_info(self):
-        print(f"Drone index: {self.index}")
-        print(f"Drone location: {self.location}")
-        print(f"Drone speed factor: {self.speed_factor}")
-        print(f"Max drone distance: {self.eps}")
+    def __repr__(self):
+        return (
+            f"Drone {self.index} at {self.location}, "
+            f"Speed Factor: {self.speed_factor}, "
+            f"Max Drone Distance: {self.eps}"
+        )
 
