@@ -66,7 +66,7 @@ def solve():
 
     model = gp.Model("mTSP-DS")
 
-    # Decision variables
+    # DECISION VARIABLES
     # Makespan
     tau = model.addVar(vtype=GRB.CONTINUOUS, name="tau")
 
@@ -74,7 +74,7 @@ def solve():
     z = model.addVars(m, vtype=GRB.INTEGER, name="z")
 
     # truck k traverse edge (i,j)
-    x_k_ij = model.addVars([(k, i, j) for k in range(Kn) for i in range(n-1) for j in range(n-1)],
+    x_k_ij = model.addVars([(k, i, j) for k in range(Kn) for i in range(len(vl)-1) for j in range(len(vr)-1)],
                            vtype=GRB.BINARY, name="x_k_ij")
 
     # time truck k arrives at node i
