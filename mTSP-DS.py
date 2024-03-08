@@ -1,4 +1,5 @@
 import gurobipy as gp
+import numpy as np
 from gurobipy import GRB
 from Customer import Customer
 from Truck import Truck
@@ -58,11 +59,20 @@ def solve():
         v.append(DroneStation(2, Location(60, 40), Dn))
         # Ending depot
         v.append(Depot(1, Location(0, 0)))
-        plot_nodes(v)
+        # TODO:  remove comment on the plot function calling
+        # plot_nodes(v)
         for i in range(Kn):
             k.append(Truck(i, Location(0, 0)))
     vl = v[1:]  # nodes \ initialDepot
     vr = v[:-1]  # node \ endingDepot
+
+    # Define distance matrix (cost) between nodes for both trucks and drones
+    t_ij = np.zeros((len(v), len(v)))  # = d_ij = d_ij_drones
+    t_ij_drone = np.zeros((len(v), len(v)))
+    for i in range(len(v)):
+        for j in range(len(v)):
+            t_ij[i][j] = v[i].node_distance(v[j])
+            t_ij_drone[i][j] = v[i].node_distance(v[j])/alpha
 
     model = gp.Model("mTSP-DS")
 
@@ -86,6 +96,14 @@ def solve():
 
     # model.update()
     model.setObjective(tau, sense=GRB.MINIMIZE)
+
+    # CONSTRAINTS
+    # Constraint (2)
+    model.addConstrs((a_ki[k, 1 + n + m] <= tau for k in range(Kn)), name="(2)")
+
+    # Constraint (3)
+    model.addConstrs((a_ki[k, s] + gp.quicksum(2 * t_ij_drone[s, j] * y_d_sj[d, s, j] for j in range(n)) <= tau
+                      for k in range(Kn) for s in range(m) for d in range(Dn)), name="(3)")
 
     model.update()
     model.write("modello.lp")
