@@ -45,7 +45,6 @@ def solve():
 
     v = []  # nodes
     k = []  # trucks
-
     if custom_setup:
         # starting depot
         v.append(Depot(0, Location(0, 0)))
@@ -81,10 +80,10 @@ def solve():
     tau = model.addVar(vtype=GRB.CONTINUOUS, name="tau")
 
     # DS activation
-    z = model.addVars(m, vtype=GRB.INTEGER, name="z")
+    z_s = model.addVars(m, vtype=GRB.INTEGER, name="z_s")
 
     # truck k traverse edge (i,j)
-    x_k_ij = model.addVars([(k, i, j) for k in range(Kn) for i in range(len(vl)-1) for j in range(len(vr)-1)],
+    x_k_ij = model.addVars([(k, i, j) for k in range(Kn) for i in range(len(vl)) for j in range(len(vr))],
                            vtype=GRB.BINARY, name="x_k_ij")
 
     # time truck k arrives at node i
@@ -94,7 +93,7 @@ def solve():
     y_d_sj = model.addVars([(d, s, j) for d in range(Dn) for s in range(m) for j in range(n)],
                            vtype=GRB.BINARY, name="y_d_sj")
 
-    # model.update()
+    model.update()
     model.setObjective(tau, sense=GRB.MINIMIZE)
 
     # CONSTRAINTS
@@ -105,6 +104,37 @@ def solve():
     model.addConstrs((a_ki[k, s] + gp.quicksum(2 * t_ij_drone[s, j] * y_d_sj[d, s, j] for j in range(n)) <= tau
                       for k in range(Kn) for s in range(m) for d in range(Dn)), name="(3)")
 
+    # Constraint (4)
+    model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, j] for i in range(len(vl)) if i != j-1) for k in range(Kn))
+                      + gp.quicksum(gp.quicksum(y_d_sj[d, s, j] for d in range(Dn)) for s in range(m)) == 1
+                      for j in range(n)), name="(4)")
+    # NB: j-1 visto che le i=0 è il depot mentre j=0 è il primo customer
+    # TODO: check i != j-1 non funzia
+
+    # Constraint (5.1)
+    model.addConstrs((gp.quicksum(x_k_ij[k, 0, j] for j in range(n)) == 1 for k in range(Kn)), name="(5.1)")
+
+    # Constraint (5.2)
+    model.addConstrs((gp.quicksum(x_k_ij[k, i+1, m+n] for i in range(n)) == 1 for k in range(Kn)), name="(5.2)")
+    # i non dovrebbe essere presa su Vl e non su Vn? Mi va bene che l'ultimo step del truck è una DS
+    # se è poi la DS a servire l'ultimo client...
+
+    # Constraint (6)
+    model.addConstrs((gp.quicksum(x_k_ij[k, i, h] for i in range(len(vl)) if h != i+1)
+                      - gp.quicksum(x_k_ij[k, 1+h, j] for j in range(len(vr)) if j != h) == 0
+                      for k in range(Kn) for h in range(m+n)), name="(6)")
+    # il primo constraint non funziona, viene preso x_0_a+1_a che equivale a partenza ed arrivo allo stesso nodo
+
+    # Constraint (7)
+    model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, s] for i in range(len(vl)) if i != s+1)
+                                  for k in range(Kn)) <= 1 for s in range(n, n+m)), name="(7)")
+
+    # Constraint (8)
+    model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, s] for i in range(len(vl)) if i != s + 1)
+                                  for k in range(Kn)) == z_s[s - n] for s in range(n, n + m)), name="(8)")
+
+    # Constraint (9)
+    model.addConstr((gp.quicksum(z_s[s] for s in range(m)) <= C), name="(9)")
     model.update()
     model.write("modello.lp")
 
