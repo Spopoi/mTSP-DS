@@ -135,6 +135,15 @@ def solve():
 
     # Constraint (9)
     model.addConstr((gp.quicksum(z_s[s] for s in range(m)) <= C), name="(9)")
+
+    # Constraint (10)
+    model.addConstrs((gp.quicksum(gp.quicksum(y_d_sj[d, s, j] for j in range(n))
+                                  for d in range(Dn)) <= n*z_s[s] for s in range(m)), name="(10)")
+
+    # Constraint (11)
+    model.addConstrs((2 * t_ij[1+n+s, 1+j] * y_d_sj[d, s, j] <= eps
+                      for s in range(m) for d in range(Dn) for j in range(n)), name="(11)")
+    print(t_ij)
     model.update()
     model.write("modello.lp")
 
