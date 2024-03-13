@@ -143,7 +143,15 @@ def solve():
     # Constraint (11)
     model.addConstrs((2 * t_ij[1+n+s, 1+j] * y_d_sj[d, s, j] <= eps
                       for s in range(m) for d in range(Dn) for j in range(n)), name="(11)")
-    print(t_ij)
+
+    # Constraint (12)
+    M = 100
+    model.addConstrs((M*(x_k_ij[k, i, j] - 1) + a_ki[k, i] + t_ij[i, j] <= a_ki[k, j]
+                      for k in range(Kn) for i in range(len(vl)) for j in range(len(vr)) if i+1 != j), name="(12)")
+
+    # Constraint (13)
+    # model.addConstrs((<= ), name="(13)")
+
     model.update()
     model.write("modello.lp")
 
