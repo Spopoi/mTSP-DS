@@ -15,20 +15,21 @@ def plot_nodes(nodes):
     x_values = [node.location.x for node in nodes]
     y_values = [node.location.y for node in nodes]
 
-    colors = ['blue' if isinstance(node, Customer) else 'red' for node in nodes]
+    colors = ['blue' if isinstance(node, Customer) else 'red' if isinstance(node, DroneStation) else 'black' for node in nodes]
 
     plt.scatter(x_values, y_values, color=colors, label="Nodes")
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.title("Nodes plot")
 
-    for node in nodes:
+    for node in nodes[:-1]:
         plt.annotate(str(node.index), (node.location.x, node.location.y), textcoords="offset points", xytext=(0, 10),
                      ha='center')
 
     blue_patch = plt.Line2D([0], [0], marker='o', color='w', label='Customer', markerfacecolor='blue', markersize=10)
     red_patch = plt.Line2D([0], [0], marker='o', color='w', label='Drone Station', markerfacecolor='red', markersize=10)
-    plt.legend(handles=[blue_patch, red_patch])
+    black_patch = plt.Line2D([0], [0], marker='o', color='w', label='Depot', markerfacecolor='black', markersize=10)
+    plt.legend(handles=[black_patch, red_patch, blue_patch])
     plt.show()
 
 
@@ -59,7 +60,7 @@ def solve():
         # Ending depot
         v.append(Depot(1, Location(0, 0)))
         # TODO:  remove comment on the plot function calling
-        # plot_nodes(v)
+        plot_nodes(v)
         for i in range(Kn):
             k.append(Truck(i, Location(0, 0)))
     vl = v[1:]  # nodes \ initialDepot
