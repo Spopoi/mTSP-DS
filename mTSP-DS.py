@@ -148,7 +148,7 @@ def solve():
                       for s in range(m) for d in range(Dn) for j in range(n)), name="(11)")
 
     # Constraint (12)
-    M = 100
+    M = 1000
     model.addConstrs((M*(x_k_ij[k, i, j] - 1) + a_ki[k, i] + t_ij[i, j] <= a_ki[k, j]
                       for k in range(Kn) for i in range(len(vl)) for j in range(len(vr)) if i+1 != j), name="(12)")
 
@@ -168,6 +168,20 @@ def solve():
 
     model.update()
     model.write("modello.lp")
+
+    model.optimize()  # equivalent to solve() for xpress
+
+    print("---------model.status--------")
+    print(model.status)
+    # https://www.gurobi.com/documentation/9.5/refman/optimization_status_codes.html
+
+    print("-----------model.Runtime-----------------")
+    print(model.Runtime)
+    # https://www.gurobi.com/documentation/9.5/refman/runtime.html
+
+    print("-------model.ObjVal----------")
+    print(model.ObjVal)
+    # https://www.gurobi.com/documentation/9.5/refman/objval.html#attr:ObjVal
 
 
 if __name__ == "__main__":
