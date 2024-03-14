@@ -1,3 +1,5 @@
+import itertools
+
 import gurobipy as gp
 import numpy as np
 from gurobipy import GRB
@@ -60,7 +62,7 @@ def solve():
         # Ending depot
         v.append(Depot(1, Location(0, 0)))
         # TODO:  remove comment on the plot function calling
-        plot_nodes(v)
+        # plot_nodes(v)
         for i in range(Kn):
             k.append(Truck(i, Location(0, 0)))
     vl = v[1:]  # nodes \ initialDepot
@@ -150,8 +152,19 @@ def solve():
     model.addConstrs((M*(x_k_ij[k, i, j] - 1) + a_ki[k, i] + t_ij[i, j] <= a_ki[k, j]
                       for k in range(Kn) for i in range(len(vl)) for j in range(len(vr)) if i+1 != j), name="(12)")
 
+    sub_tours_index = []
+    v_index = range(1, n+m+1)
+
+    # Genera i sotto-tour di lunghezza compresa tra 2 e la lunghezza di v
+    for lunghezza in range(2, len(v_index)+1):
+        # Genera le permutazioni per la lunghezza corrente
+        for combo in itertools.permutations(v_index, lunghezza):
+            sub_tours_index.append(list(combo))
+
     # Constraint (13)
-    # model.addConstrs((<= ), name="(13)")
+    for S in sub_tours_index:
+        model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, j-1] for j in S if i != j) for i in S)
+                          <= len(S) - 1 for k in range(Kn)), name="(13)")
 
     model.update()
     model.write("modello.lp")
