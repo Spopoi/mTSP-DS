@@ -1,6 +1,7 @@
 import itertools
 
 import gurobipy as gp
+import numpy
 import numpy as np
 from gurobipy import GRB
 from Customer import Customer
@@ -68,6 +69,15 @@ def solve():
     vl = v[1:]  # nodes \ initialDepot
     vr = v[:-1]  # node \ endingDepot
 
+    Vn = range(1, n+1)
+    K = range(1, Kn+1)
+    Vs = range(n+1, n+m+1)
+    V = range(len(v))
+    Vl = V[:-1]
+    Vr = V[1:]
+    D = range(1, Dn+1)
+    H = itertools.chain(Vn, Vs)  # Vn u Vs
+
     # Define distance matrix (cost) between nodes for both trucks and drones
     t_ij = np.zeros((len(v), len(v)))  # = d_ij = d_ij_drones
     t_ij_drone = np.zeros((len(v), len(v)))
@@ -83,17 +93,17 @@ def solve():
     tau = model.addVar(vtype=GRB.CONTINUOUS, name="tau")
 
     # DS activation
-    z_s = model.addVars(m, vtype=GRB.INTEGER, name="z_s")
+    z_s = model.addVars(Vs, vtype=GRB.INTEGER, name="z_s")
 
     # truck k traverse edge (i,j)
-    x_k_ij = model.addVars([(k, i, j) for k in range(Kn) for i in range(len(vl)) for j in range(len(vr))],
+    x_k_ij = model.addVars([(k, i, j) for k in K for i in Vl for j in Vr],
                            vtype=GRB.BINARY, name="x_k_ij")
 
     # time truck k arrives at node i
-    a_ki = model.addVars([(i, j) for i in range(Kn) for j in range(len(v))], vtype=GRB.CONTINUOUS, name="a_ki")
+    a_ki = model.addVars([(i, j) for i in K for j in V], vtype=GRB.CONTINUOUS, name="a_ki")
 
     # customer j served by drone d from drone station s
-    y_d_sj = model.addVars([(d, s, j) for d in range(Dn) for s in range(m) for j in range(n)],
+    y_d_sj = model.addVars([(d, s, j) for d in D for s in Vs for j in Vn],
                            vtype=GRB.BINARY, name="y_d_sj")
 
     model.update()
@@ -101,70 +111,61 @@ def solve():
 
     # CONSTRAINTS
     # Constraint (2)
-    model.addConstrs((a_ki[k, 1 + n + m] <= tau for k in range(Kn)), name="(2)")
+    model.addConstrs((a_ki[k, 1 + n + m] <= tau for k in K), name="(2)")
 
     # Constraint (3)
-    model.addConstrs((a_ki[k, s] + gp.quicksum(2 * t_ij_drone[s, j] * y_d_sj[d, s, j] for j in range(n)) <= tau
-                      for k in range(Kn) for s in range(m) for d in range(Dn)), name="(3)")
+    model.addConstrs((a_ki[k, s] + gp.quicksum(2 * t_ij_drone[s, j] * y_d_sj[d, s, j] for j in Vn) <= tau
+                      for k in K for s in Vs for d in D), name="(3)")
 
     # Constraint (4)
-    model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, j] for i in range(len(vl)) if i != j-1) for k in range(Kn))
-                      + gp.quicksum(gp.quicksum(y_d_sj[d, s, j] for d in range(Dn)) for s in range(m)) == 1
-                      for j in range(n)), name="(4)")
-    # NB: j-1 visto che le i=0 è il depot mentre j=0 è il primo customer
-    # TODO: check i != j-1 non funzia
+    model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, j] for i in Vl if i != j) for k in K) +
+                      gp.quicksum(gp.quicksum(y_d_sj[d, s, j] for d in D) for s in Vs) == 1 for j in Vn), name="(4)")
 
     # Constraint (5.1)
-    model.addConstrs((gp.quicksum(x_k_ij[k, 0, j] for j in range(n)) == 1 for k in range(Kn)), name="(5.1)")
+    model.addConstrs((gp.quicksum(x_k_ij[k, 0, j] for j in Vn) == 1 for k in K), name="(5.1)")
 
     # Constraint (5.2)
-    model.addConstrs((gp.quicksum(x_k_ij[k, i+1, m+n] for i in range(n)) == 1 for k in range(Kn)), name="(5.2)")
+    model.addConstrs((gp.quicksum(x_k_ij[k, i, 1+n+m] for i in Vn) == 1 for k in K), name="(5.2)")
     # i non dovrebbe essere presa su Vl e non su Vn? Mi va bene che l'ultimo step del truck è una DS
     # se è poi la DS a servire l'ultimo client...
 
     # Constraint (6)
-    model.addConstrs((gp.quicksum(x_k_ij[k, i, h] for i in range(len(vl)) if h != i+1)
-                      - gp.quicksum(x_k_ij[k, 1+h, j] for j in range(len(vr)) if j != h) == 0
-                      for k in range(Kn) for h in range(m+n)), name="(6)")
-    # il primo constraint non funziona, viene preso x_0_a+1_a che equivale a partenza ed arrivo allo stesso nodo
+    model.addConstrs(((gp.quicksum(x_k_ij[k, i, h] for i in Vl if i != h)
+                      - gp.quicksum(x_k_ij[k, h, j] for j in Vr if h != j) == 0) for h in H for k in K), name="(6)")
 
     # Constraint (7)
-    model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, s] for i in range(len(vl)) if i != s+1)
-                                  for k in range(Kn)) <= 1 for s in range(n, n+m)), name="(7)")
+    model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, s] for i in Vl if i != s)
+                                  for k in K) <= 1 for s in Vs), name="(7)")
 
     # Constraint (8)
-    model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, s] for i in range(len(vl)) if i != s + 1)
-                                  for k in range(Kn)) == z_s[s - n] for s in range(n, n + m)), name="(8)")
+    model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, s] for i in Vl if i != s)
+                                  for k in K) == z_s[s] for s in Vs), name="(8)")
 
     # Constraint (9)
-    model.addConstr((gp.quicksum(z_s[s] for s in range(m)) <= C), name="(9)")
+    model.addConstr((gp.quicksum(z_s[s] for s in Vs) <= C), name="(9)")
 
     # Constraint (10)
-    model.addConstrs((gp.quicksum(gp.quicksum(y_d_sj[d, s, j] for j in range(n))
-                                  for d in range(Dn)) <= n*z_s[s] for s in range(m)), name="(10)")
+    model.addConstrs((gp.quicksum(gp.quicksum(y_d_sj[d, s, j] for j in Vn)
+                                  for d in D) <= n*z_s[s] for s in Vs), name="(10)")
 
     # Constraint (11)
-    model.addConstrs((2 * t_ij[1+n+s, 1+j] * y_d_sj[d, s, j] <= eps
-                      for s in range(m) for d in range(Dn) for j in range(n)), name="(11)")
+    model.addConstrs((2 * t_ij[s, j] * y_d_sj[d, s, j] <= eps
+                      for s in Vs for d in D for j in Vn), name="(11)")
 
     # Constraint (12)
     M = 1000
     model.addConstrs((M*(x_k_ij[k, i, j] - 1) + a_ki[k, i] + t_ij[i, j] <= a_ki[k, j]
-                      for k in range(Kn) for i in range(len(vl)) for j in range(len(vr)) if i+1 != j), name="(12)")
+                      for k in K for i in Vl for j in Vr if i != j), name="(12)")
 
-    sub_tours_index = []
-    v_index = range(1, n+m+1)
-
-    # Genera i sotto-tour di lunghezza compresa tra 2 e la lunghezza di v
-    for lunghezza in range(2, len(v_index)+1):
-        # Genera le permutazioni per la lunghezza corrente
-        for combo in itertools.permutations(v_index, lunghezza):
-            sub_tours_index.append(list(combo))
+    sub_tours_indexes = []
+    for sub_tour_length in range(2, len(v)-1):  # da 2 a 6?? (non considerando il depot)
+        for combo in itertools.permutations(V[1:-1], sub_tour_length):
+            sub_tours_indexes.append(list(combo))
 
     # Constraint (13)
-    for S in sub_tours_index:
-        model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, j-1] for j in S if i != j) for i in S)
-                          <= len(S) - 1 for k in range(Kn)), name="(13)")
+    for S in sub_tours_indexes:
+        model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, j] for j in S if i != j) for i in S)
+                          <= len(S) - 1 for k in K), name="(13)")
 
     model.update()
     model.write("modello.lp")
@@ -182,6 +183,9 @@ def solve():
     print("-------model.ObjVal----------")
     print(model.ObjVal)
     # https://www.gurobi.com/documentation/9.5/refman/objval.html#attr:ObjVal
+
+    for variabile in model.getVars():
+        print(f"{variabile.varName}: {variabile.x}")
 
 
 if __name__ == "__main__":
