@@ -1,12 +1,10 @@
 import itertools
 
 import gurobipy as gp
-import numpy
 import numpy as np
 from gurobipy import GRB
 from Customer import Customer
 from Truck import Truck
-from Drone import Drone
 from DroneStation import DroneStation
 from Location import Location
 from Depot import Depot
@@ -43,19 +41,49 @@ def generate_sub_tours_indexes(v):
     return sub_tours_indexes
 
 
+def rand_location(maxLocationBound):
+    rand_x = np.random.randint(1, maxLocationBound)
+    rand_y = np.random.randint(1, maxLocationBound)
+    return Location(rand_x, rand_y)
+
+
+def calculate_distance_matrices(v, alpha):
+    num_nodes = len(v)
+    t_ij = np.zeros((num_nodes, num_nodes))
+    t_ij_drone = np.zeros((num_nodes, num_nodes))
+
+    for i in range(num_nodes):
+        for j in range(num_nodes):
+            t_ij[i][j] = v[i].node_distance(v[j])
+            t_ij_drone[i][j] = v[i].node_distance(v[j]) / alpha
+    return t_ij, t_ij_drone
+
+
 def solve():
     # Parameters
-    n = 4  # customers
+    n = 6  # customers
     m = 2  # drone stations
-    Dn = 2  # num of drones per drone station
+    Dn = 1  # num of drones per drone station
     Kn = 2  # trucks
     C = 1  # max number of actionable drone stations (<= m)
     alpha = 1.2  # drone velocity factor relative to truck speed (>1 means drone faster than truck)
     eps = 100  # max drone distance
-    custom_setup = True
+
+    custom_setup = False
+    maxLocationBound = 200
+
+    # indexes
+    Vn = range(1, n + 1)
+    K = range(1, Kn + 1)
+    Vs = range(n + 1, n + m + 1)
+    D = range(1, Dn + 1)
 
     v = []  # nodes
     k = []  # trucks
+
+    for i in range(Kn):
+        k.append(Truck(i, Location(0, 0)))
+
     if custom_setup:
         # starting depot
         v.append(Depot(0, Location(0, 0)))
@@ -69,27 +97,27 @@ def solve():
         v.append(DroneStation(2, Location(60, 40), Dn))
         # Ending depot
         v.append(Depot(1, Location(0, 0)))
-        # TODO:  remove comment on the plot function calling
-        # plot_nodes(v)
-        for i in range(Kn):
-            k.append(Truck(i, Location(0, 0)))
 
-    Vn = range(1, n+1)
-    K = range(1, Kn+1)
-    Vs = range(n+1, n+m+1)
+    else:
+        # starting depot
+        v.append(Depot(0, Location(0, 0)))
+        # customers:
+        for i in Vn:
+            v.append(Customer(i, rand_location(maxLocationBound)))
+        # Drone stations:
+        for j in Vs:
+            v.append(DroneStation(j, rand_location(maxLocationBound), Dn))
+        # Ending depot
+        v.append(Depot(1, Location(0, 0)))
+
+    plot_nodes(v)
+
     V = range(len(v))
     Vl = V[:-1]
     Vr = V[1:]
-    D = range(1, Dn+1)
     H = itertools.chain(Vn, Vs)  # Vn u Vs
 
-    # Define distance matrix (cost) between nodes for both trucks and drones
-    t_ij = np.zeros((len(v), len(v)))  # = d_ij = d_ij_drones
-    t_ij_drone = np.zeros((len(v), len(v)))
-    for i in range(len(v)):
-        for j in range(len(v)):
-            t_ij[i][j] = v[i].node_distance(v[j])
-            t_ij_drone[i][j] = v[i].node_distance(v[j])/alpha
+    t_ij, t_ij_drone = calculate_distance_matrices(v, alpha)
 
     model = gp.Model("mTSP-DS")
 
