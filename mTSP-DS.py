@@ -14,7 +14,6 @@ import matplotlib.pyplot as plt
 
 
 def plot_nodes(nodes):
-    # Todo: Spezzare i nodi e plottarli separatamente
     x_values = [node.location.x for node in nodes]
     y_values = [node.location.y for node in nodes]
 
@@ -36,14 +35,22 @@ def plot_nodes(nodes):
     plt.show()
 
 
+def generate_sub_tours_indexes(v):
+    sub_tours_indexes = []
+    for sub_tour_length in range(2, len(v)-1):
+        for combo in itertools.permutations(v[1:-1], sub_tour_length):
+            sub_tours_indexes.append(list(combo))
+    return sub_tours_indexes
+
+
 def solve():
     # Parameters
     n = 4  # customers
     m = 2  # drone stations
-    Dn = 1  # num of drones per drone station
+    Dn = 2  # num of drones per drone station
     Kn = 2  # trucks
     C = 1  # max number of actionable drone stations (<= m)
-    alpha = 0.5  # drone velocity factor relative to truck speed
+    alpha = 1.2  # drone velocity factor relative to truck speed (>1 means drone faster than truck)
     eps = 100  # max drone distance
     custom_setup = True
 
@@ -66,8 +73,6 @@ def solve():
         # plot_nodes(v)
         for i in range(Kn):
             k.append(Truck(i, Location(0, 0)))
-    vl = v[1:]  # nodes \ initialDepot
-    vr = v[:-1]  # node \ endingDepot
 
     Vn = range(1, n+1)
     K = range(1, Kn+1)
@@ -157,10 +162,7 @@ def solve():
     model.addConstrs((M*(x_k_ij[k, i, j] - 1) + a_ki[k, i] + t_ij[i, j] <= a_ki[k, j]
                       for k in K for i in Vl for j in Vr if i != j), name="(12)")
 
-    sub_tours_indexes = []
-    for sub_tour_length in range(2, len(v)-1):  # da 2 a 6?? (non considerando il depot)
-        for combo in itertools.permutations(V[1:-1], sub_tour_length):
-            sub_tours_indexes.append(list(combo))
+    sub_tours_indexes = generate_sub_tours_indexes(V)
 
     # Constraint (13)
     for S in sub_tours_indexes:
@@ -184,8 +186,8 @@ def solve():
     print(model.ObjVal)
     # https://www.gurobi.com/documentation/9.5/refman/objval.html#attr:ObjVal
 
-    for variabile in model.getVars():
-        print(f"{variabile.varName}: {variabile.x}")
+    for var in model.getVars():
+        print(f"{var.varName}: {var.x}")
 
 
 if __name__ == "__main__":
