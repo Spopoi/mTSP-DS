@@ -15,7 +15,8 @@ def plot_nodes(nodes):
     x_values = [node.location.x for node in nodes]
     y_values = [node.location.y for node in nodes]
 
-    colors = ['blue' if isinstance(node, Customer) else 'red' if isinstance(node, DroneStation) else 'black' for node in nodes]
+    colors = ['blue' if isinstance(node, Customer) else 'red' if isinstance(node, DroneStation) else 'black' for node in
+              nodes]
 
     plt.scatter(x_values, y_values, color=colors, label="Nodes")
     plt.xlabel("X")
@@ -35,7 +36,7 @@ def plot_nodes(nodes):
 
 def generate_sub_tours_indexes(v):
     sub_tours_indexes = []
-    for sub_tour_length in range(2, len(v)-1):
+    for sub_tour_length in range(2, len(v) - 1):
         for combo in itertools.permutations(v[1:-1], sub_tour_length):
             sub_tours_indexes.append(list(combo))
     return sub_tours_indexes
@@ -59,9 +60,62 @@ def calculate_distance_matrices(v, alpha):
     return t_ij, t_ij_drone
 
 
+def get_k_value(var_name):
+    parts = var_name.split("[")
+    return int(parts[1][0])
+
+
+def getTrucksTour(model):
+    k_var_lists = {}
+    truck_k_tour = []
+    for var in model._vars:
+        if "x_k_ij" in var.varName:
+            k = get_k_value(var.varName)  # Extract k value from variable name
+            if k not in k_var_lists:
+                k_var_lists[k] = []
+            if model.cbGetSolution(var) == 1:
+                k_var_lists[k].append(var)
+    for k, var_list in k_var_lists.items():
+        truck_k_tour.append(var_list)
+        print(f"Variables for k = {k}: {var_list}")
+    return truck_k_tour
+
+
+def getVisitedNodesIndex(tour):
+    visited_nodes = []
+    for var in tour:
+        parts = var.varName.split(",")
+        starting_node = int(parts[1])
+        ending_node = int(parts[2][:-1])
+        if starting_node not in visited_nodes:
+            visited_nodes.append(starting_node)
+        if ending_node not in visited_nodes:
+            visited_nodes.append(ending_node)
+    return sorted(visited_nodes)
+
+
+def subtourelim(model, where):
+    if where == GRB.Callback.MIPSOL:
+        print("CALLBACKKKKKKKKKK")
+        tours = getTrucksTour(model)
+        truck_index = 1
+        for truck_tour in tours:
+            node_indexes = getVisitedNodesIndex(truck_tour)
+            sub_tours_indexes = generate_sub_tours_indexes(node_indexes)
+            print("k turn ", truck_tour)
+            # Constraint (13)
+            for S in sub_tours_indexes:
+                print(S)
+                x_k_ij = model._edges
+                print(gp.quicksum(gp.quicksum(x_k_ij[truck_index, i, j] for j in S if i != j) for i in S) <= len(S) - 1)
+                model.cbLazy(gp.quicksum(gp.quicksum(x_k_ij[truck_index, i, j] for j in S if i != j) for i in S)
+                             <= len(S) - 1)
+            truck_index += 1
+
+
 def solve():
     # Parameters
-    n = 6  # customers
+    n = 4  # customers
     m = 2  # drone stations
     Dn = 1  # num of drones per drone station
     Kn = 2  # trucks
@@ -69,7 +123,7 @@ def solve():
     alpha = 1.2  # drone velocity factor relative to truck speed (>1 means drone faster than truck)
     eps = 100  # max drone distance
 
-    custom_setup = False
+    custom_setup = True
     maxLocationBound = 200
 
     # indexes
@@ -110,7 +164,7 @@ def solve():
         # Ending depot
         v.append(Depot(1, Location(0, 0)))
 
-    plot_nodes(v)
+    # plot_nodes(v)
 
     V = range(len(v))
     Vl = V[:-1]
@@ -125,12 +179,13 @@ def solve():
     # Makespan
     tau = model.addVar(vtype=GRB.CONTINUOUS, name="tau")
 
-    # DS activation
-    z_s = model.addVars(Vs, vtype=GRB.INTEGER, name="z_s")
-
     # truck k traverse edge (i,j)
     x_k_ij = model.addVars([(k, i, j) for k in K for i in Vl for j in Vr],
                            vtype=GRB.BINARY, name="x_k_ij")
+    print(len(x_k_ij))
+
+    # DS activation
+    z_s = model.addVars(Vs, vtype=GRB.INTEGER, name="z_s")
 
     # time truck k arrives at node i
     a_ki = model.addVars([(i, j) for i in K for j in V], vtype=GRB.CONTINUOUS, name="a_ki")
@@ -158,13 +213,13 @@ def solve():
     model.addConstrs((gp.quicksum(x_k_ij[k, 0, j] for j in Vn) == 1 for k in K), name="(5.1)")
 
     # Constraint (5.2)
-    model.addConstrs((gp.quicksum(x_k_ij[k, i, 1+n+m] for i in Vn) == 1 for k in K), name="(5.2)")
+    model.addConstrs((gp.quicksum(x_k_ij[k, i, 1 + n + m] for i in Vn) == 1 for k in K), name="(5.2)")
     # i non dovrebbe essere presa su Vl e non su Vn? Mi va bene che l'ultimo step del truck è una DS
     # se è poi la DS a servire l'ultimo client...
 
     # Constraint (6)
     model.addConstrs(((gp.quicksum(x_k_ij[k, i, h] for i in Vl if i != h)
-                      - gp.quicksum(x_k_ij[k, h, j] for j in Vr if h != j) == 0) for h in H for k in K), name="(6)")
+                       - gp.quicksum(x_k_ij[k, h, j] for j in Vr if h != j) == 0) for h in H for k in K), name="(6)")
 
     # Constraint (7)
     model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, s] for i in Vl if i != s)
@@ -179,7 +234,7 @@ def solve():
 
     # Constraint (10)
     model.addConstrs((gp.quicksum(gp.quicksum(y_d_sj[d, s, j] for j in Vn)
-                                  for d in D) <= n*z_s[s] for s in Vs), name="(10)")
+                                  for d in D) <= n * z_s[s] for s in Vs), name="(10)")
 
     # Constraint (11)
     model.addConstrs((2 * t_ij[s, j] * y_d_sj[d, s, j] <= eps
@@ -187,7 +242,7 @@ def solve():
 
     # Constraint (12)
     M = 1000
-    model.addConstrs((M*(x_k_ij[k, i, j] - 1) + a_ki[k, i] + t_ij[i, j] <= a_ki[k, j]
+    model.addConstrs((M * (x_k_ij[k, i, j] - 1) + a_ki[k, i] + t_ij[i, j] <= a_ki[k, j]
                       for k in K for i in Vl for j in Vr if i != j), name="(12)")
 
     sub_tours_indexes = generate_sub_tours_indexes(V)
@@ -199,8 +254,11 @@ def solve():
 
     model.update()
     model.write("modello.lp")
+    model._edges = x_k_ij
+    model._vars = model.getVars()
 
-    model.optimize()  # equivalent to solve() for xpress
+    model.Params.lazyConstraints = 1
+    model.optimize(subtourelim)
 
     print("---------model.status--------")
     print(model.status)
