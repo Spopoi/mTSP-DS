@@ -242,6 +242,9 @@ def solve():
     model.addConstrs((M * (x_k_ij[k, i, j] - 1) + a_ki[k, i] + t_ij[i, j] <= a_ki[k, j]
                       for k in K for i in Vl for j in Vr if i != j), name="(12)")
 
+    # Constraint (14)
+    model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, j] * t_ij[i, j] for j in Vr if i != j) for i in Vl)
+                      <= a_ki[k, 1 + n + m] for k in K), name="(14)")
 
     model.update()
     model.write("modello.lp")
