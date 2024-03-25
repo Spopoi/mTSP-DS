@@ -37,7 +37,7 @@ def plot_nodes(nodes):
 def generate_sub_tours_indexes(v):
     sub_tours_indexes = []
     for sub_tour_length in range(2, len(v) - 1):
-        for combo in itertools.permutations(v[1:-1], sub_tour_length):
+        for combo in itertools.combinations(v[1:-1], sub_tour_length):
             sub_tours_indexes.append(list(combo))
     return sub_tours_indexes
 
@@ -77,7 +77,7 @@ def getTrucksTour(model):
                 k_var_lists[k].append(var)
     for k, var_list in k_var_lists.items():
         truck_k_tour.append(var_list)
-        print(f"Variables for k = {k}: {var_list}")
+        # print(f"Variables for k = {k}: {var_list}")
     return truck_k_tour
 
 
@@ -96,18 +96,16 @@ def getVisitedNodesIndex(tour):
 
 def subtourelim(model, where):
     if where == GRB.Callback.MIPSOL:
-        print("CALLBACKKKKKKKKKK")
         tours = getTrucksTour(model)
         truck_index = 1
+        x_k_ij = model._edges
         for truck_tour in tours:
             node_indexes = getVisitedNodesIndex(truck_tour)
             sub_tours_indexes = generate_sub_tours_indexes(node_indexes)
-            print("k turn ", truck_tour)
             # Constraint (13)
             for S in sub_tours_indexes:
-                print(S)
-                x_k_ij = model._edges
-                print(gp.quicksum(gp.quicksum(x_k_ij[truck_index, i, j] for j in S if i != j) for i in S) <= len(S) - 1)
+                # print(S)
+                # print(gp.quicksum(gp.quicksum(x_k_ij[truck_index, i, j] for j in S if i != j) for i in S) <= len(S) - 1)
                 model.cbLazy(gp.quicksum(gp.quicksum(x_k_ij[truck_index, i, j] for j in S if i != j) for i in S)
                              <= len(S) - 1)
             truck_index += 1
@@ -115,15 +113,15 @@ def subtourelim(model, where):
 
 def solve():
     # Parameters
-    n = 4  # customers
+    n = 6  # customers
     m = 2  # drone stations
     Dn = 1  # num of drones per drone station
     Kn = 2  # trucks
     C = 1  # max number of actionable drone stations (<= m)
     alpha = 1.2  # drone velocity factor relative to truck speed (>1 means drone faster than truck)
-    eps = 100  # max drone distance
+    eps = 200  # max drone distance
 
-    custom_setup = True
+    custom_setup = False
     maxLocationBound = 200
 
     # indexes
@@ -164,7 +162,7 @@ def solve():
         # Ending depot
         v.append(Depot(1, Location(0, 0)))
 
-    # plot_nodes(v)
+    plot_nodes(v)
 
     V = range(len(v))
     Vl = V[:-1]
@@ -182,7 +180,6 @@ def solve():
     # truck k traverse edge (i,j)
     x_k_ij = model.addVars([(k, i, j) for k in K for i in Vl for j in Vr],
                            vtype=GRB.BINARY, name="x_k_ij")
-    print(len(x_k_ij))
 
     # DS activation
     z_s = model.addVars(Vs, vtype=GRB.INTEGER, name="z_s")
@@ -245,12 +242,6 @@ def solve():
     model.addConstrs((M * (x_k_ij[k, i, j] - 1) + a_ki[k, i] + t_ij[i, j] <= a_ki[k, j]
                       for k in K for i in Vl for j in Vr if i != j), name="(12)")
 
-    sub_tours_indexes = generate_sub_tours_indexes(V)
-
-    # Constraint (13)
-    for S in sub_tours_indexes:
-        model.addConstrs((gp.quicksum(gp.quicksum(x_k_ij[k, i, j] for j in S if i != j) for i in S)
-                          <= len(S) - 1 for k in K), name="(13)")
 
     model.update()
     model.write("modello.lp")
