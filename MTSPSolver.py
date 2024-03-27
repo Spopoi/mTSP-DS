@@ -42,7 +42,7 @@ class MTSPSolver:
         # self.k = []  # trucks
 
         self.initNodes()
-        self.plotNodes()
+        # self.plotNodes()
 
         self.V = np.arange(len(self.v))
         self.Vl = self.V[:-1]
@@ -75,8 +75,6 @@ class MTSPSolver:
     def initNodes(self):
 
         self.k[:] = [Truck(i, Location(0, 0)) for i in range(self.Kn)]
-        # for i in range(self.Kn):
-        # self.k.append(Truck(i, Location(0, 0)))
         # starting depot
         self.v.append(Depot(0, Location(0, 0)))
         # customers:
@@ -223,15 +221,14 @@ class MTSPSolver:
                 sub_tours_indexes = generate_sub_tours_indexes(node_indexes)
                 # Constraint (13)
                 for S in sub_tours_indexes:
-                    # print(S)
-                    print(gp.quicksum(gp.quicksum(x_k_ij[truck_index, i, j] for j in S if i != j) for i in S) <= len(
-                        S) - 1)
+
+                    # print(gp.quicksum(gp.quicksum(x_k_ij[truck_index, i, j] for j in S if i != j) for i in S) <= len(
+                    #    S) - 1)
                     model.cbLazy(
                         gp.quicksum(gp.quicksum(x_k_ij[truck_index, i, j] for j in S if i != j) for i in S)
                         <= len(S) - 1)
                     model.update()
                 truck_index += 1
-
 
     def solve(self):
         self.model.optimize(self.subtourelim)
@@ -257,6 +254,7 @@ class MTSPSolver:
 
 if __name__ == "__main__":
     solver = MTSPSolver(6, 3)
+    solver.plotNodes()
     solver.solve()
 
 #
