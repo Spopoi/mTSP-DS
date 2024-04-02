@@ -3,10 +3,9 @@ import itertools
 import gurobipy as gp
 import numpy as np
 from gurobipy import GRB
-
 from Node import Node
 from Customer import Customer
-from TourUtils import get_k_value, getVisitedNodesIndex, generate_sub_tours_indexes
+from TourUtils import get_k_value, getVisitedNodesIndex, generate_sub_tours_indexes, tourToTuple
 from Truck import Truck
 from DroneStation import DroneStation
 from Location import Location
@@ -79,7 +78,7 @@ class MTSP_DS_Solver:
         for j in self.Vs:
             self.v.append(DroneStation(j, self.rand_location(), self.Dn))
         # Ending depot
-        self.v.append(Depot(1, Location(0, 0)))
+        self.v.append(Depot(self.n+self.m+1, Location(0, 0)))
 
     def rand_location(self):
         rand_x = np.random.randint(1, self.maxLocationBound)
@@ -199,7 +198,13 @@ class MTSP_DS_Solver:
         else:
             self.model.setParam('OutputFlag', 0)
 
+    def getTrucksTour_callback(self):
+        return self._getTrucksTour(lambda var: self.model.cbGetSolution(var) == 1)
+
     def getTrucksTour(self):
+        return self._getTrucksTour(lambda var: var.x == 1)
+
+    def _getTrucksTour(self, decision_checker):
         k_var_lists = {}
         truck_k_tour = []
         for var in self.model._vars:
@@ -207,16 +212,15 @@ class MTSP_DS_Solver:
                 k = get_k_value(var.varName)  # Extract k value from variable name
                 if k not in k_var_lists:
                     k_var_lists[k] = []
-                if self.model.cbGetSolution(var) == 1:
+                if decision_checker(var):
                     k_var_lists[k].append(var)
         for k, var_list in k_var_lists.items():
             truck_k_tour.append(var_list)
-            # print(f"Variables for k = {k}: {var_list}")
         return truck_k_tour
 
     def subtourelim(self, model, where):
         if where == GRB.Callback.MIPSOL:
-            tours = self.getTrucksTour()
+            tours = self.getTrucksTour_callback()
             truck_index = 1
             x_k_ij = model._edges
             for truck_tour in tours:
@@ -232,6 +236,29 @@ class MTSP_DS_Solver:
 
     def getSolution(self):
         return self.model.ObjVal
+
+    def plot_arrows_between_nodes(self, data):
+        for edge in data:
+            start_node = self.v[edge[0][0]]
+            end_node = self.v[edge[0][1]]
+            plt.arrow(start_node.location.x, start_node.location.y,
+                      end_node.location.x - start_node.location.x,
+                      end_node.location.y - start_node.location.y,
+                      head_width=0.2, head_length=0.2, fc='blue', ec='blue')
+            plt.text(start_node.location.x, start_node.location.y, f'{start_node.index}', horizontalalignment='center')
+
+        plt.scatter([node.location.x for node in self.v],
+                    [node.location.y for node in self.v], color='red', zorder=1)
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        plt.grid(True)
+        plt.show()
+
+    def plotTours(self):
+        tours = self.getTrucksTour()
+        for tour in tours:
+            tuples_tour = tourToTuple(tour)
+            self.plot_arrows_between_nodes(tuples_tour)
 
     def getExecTime(self):
         return self.model.Runtime
@@ -252,6 +279,8 @@ class MTSP_DS_Solver:
         for var in self.model.getVars():
             if var.x == 1:
                 print(f"{var.varName}: {var.x}")
+
+        # self.plotTours()
 
     def solve(self):
         self.model.optimize(self.subtourelim)

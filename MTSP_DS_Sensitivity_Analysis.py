@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+
 from MTSP_DS_Solver import MTSP_DS_Solver
 
 
@@ -9,12 +10,15 @@ def compute_average_solution(n, num_trials):
         solver = MTSP_DS_Solver(n, 0)
         solver.solve()
         execTime = solver.getExecTime()
+        solver.printExecutionLog()
         execTimes.append(execTime)
+        solver.plotNodes()
+        solver.plotTours()
     average_exec_time = np.mean(execTimes, axis=0)
     return average_exec_time
 
 
-def plot_results_for_n(values, num_trials=10):
+def plot_results_for_n(values, num_trials=1):
     average_solutions = []
     for n in values:
         average_solution = compute_average_solution(n, num_trials)
@@ -30,5 +34,6 @@ def plot_results_for_n(values, num_trials=10):
 
 
 if __name__ == "__main__":
-    n_values = [4, 5, 6, 7, 8, 9, 10]
+    n_values = [5, 10]
     plot_results_for_n(n_values)
+
