@@ -41,7 +41,7 @@ class MTSP_DS_Solver:
         self.V = np.arange(len(self.v))
         self.Vl = self.V[:-1]
         self.Vr = self.V[1:]
-        self.H = itertools.chain(self.Vn, self.Vs)  # Vn u Vs
+        self.H = list(itertools.chain(self.Vn, self.Vs))  # Vn u Vs
 
         self.t_ij, self.t_ij_drone = self.calculate_distance_matrices()
 
@@ -98,31 +98,6 @@ class MTSP_DS_Solver:
                 t_ij_drone[i][j] = self.v[i].node_distance(self.v[j]) / self.alpha
         return t_ij, t_ij_drone
 
-    def plotNodes(self):
-        x_values = [node.location.x for node in self.v]
-        y_values = [node.location.y for node in self.v]
-
-        colors = ['blue' if isinstance(node, Customer) else 'red' if isinstance(node, DroneStation) else 'black'
-                  for node in self.v]
-
-        plt.scatter(x_values, y_values, color=colors, label="Nodes")
-        plt.xlabel("X")
-        plt.ylabel("Y")
-        plt.title("Nodes plot")
-
-        for node in self.v[:-1]:
-            plt.annotate(str(node.index), (node.location.x, node.location.y), textcoords="offset points",
-                         xytext=(0, 10),
-                         ha='center')
-
-        blue_patch = plt.Line2D([0], [0], marker='o', color='w', label='Customer', markerfacecolor='blue',
-                                markersize=10)
-        red_patch = plt.Line2D([0], [0], marker='o', color='w', label='Drone Station', markerfacecolor='red',
-                               markersize=10)
-        black_patch = plt.Line2D([0], [0], marker='o', color='w', label='Depot', markerfacecolor='black', markersize=10)
-        plt.legend(handles=[black_patch, red_patch, blue_patch])
-        plt.show()
-
     def initModel(self):
         self.model = gp.Model("mTSP-DS")
 
@@ -167,8 +142,6 @@ class MTSP_DS_Solver:
         # Constraint (5.2)
         self.model.addConstrs(
             (gp.quicksum(self.x_k_ij[k, i, 1 + self.n + self.m] for i in self.Vn) == 1 for k in self.K), name="(5.2)")
-        # i non dovrebbe essere presa su Vl e non su Vn? Mi va bene che l'ultimo step del truck è una DS
-        # se è poi la DS a servire l'ultimo client...
 
         # Constraint (6)
         self.model.addConstrs(((gp.quicksum(self.x_k_ij[k, i, h] for i in self.Vl if i != h)
@@ -211,7 +184,6 @@ class MTSP_DS_Solver:
 
         self.showOptimisationLog(False)
         self.model.Params.lazyConstraints = 1
-        # self.model.setParam('OutputFlag', 0)
 
     def showOptimisationLog(self, activate):
         if activate:
@@ -258,21 +230,39 @@ class MTSP_DS_Solver:
     def getSolution(self):
         return self.model.ObjVal
 
-    def plot_arrows_between_nodes(self, data):
-        for edge in data:
-            start_node = self.v[edge[0][0]]
-            end_node = self.v[edge[0][1]]
-            plt.arrow(start_node.location.x, start_node.location.y,
-                      end_node.location.x - start_node.location.x,
-                      end_node.location.y - start_node.location.y,
-                      head_width=0.2, head_length=0.2, fc='blue', ec='blue')
-            plt.text(start_node.location.x, start_node.location.y, f'{start_node.index}', horizontalalignment='center')
+    def plotNodes(self, data=None):
+        x_values = [node.location.x for node in self.v]
+        y_values = [node.location.y for node in self.v]
 
-        plt.scatter([node.location.x for node in self.v],
-                    [node.location.y for node in self.v], color='red', zorder=1)
-        plt.xlabel('X')
-        plt.ylabel('Y')
-        plt.grid(True)
+        colors = ['blue' if isinstance(node, Customer) else 'red' if isinstance(node, DroneStation) else 'black'
+                  for node in self.v]
+
+        plt.scatter(x_values, y_values, color=colors, label="Nodes")
+        plt.xlabel("X")
+        plt.ylabel("Y")
+        plt.title("Nodes plot")
+
+        for node in self.v[:-1]:
+            plt.annotate(str(node.index), (node.location.x, node.location.y), textcoords="offset points",
+                         xytext=(0, 10),
+                         ha='center')
+
+        blue_patch = plt.Line2D([0], [0], marker='o', color='w', label='Customer', markerfacecolor='blue',
+                                markersize=10)
+        red_patch = plt.Line2D([0], [0], marker='o', color='w', label='Drone Station', markerfacecolor='red',
+                               markersize=10)
+        black_patch = plt.Line2D([0], [0], marker='o', color='w', label='Depot', markerfacecolor='black', markersize=10)
+        plt.legend(handles=[black_patch, red_patch, blue_patch])
+
+        if data:
+            for edge in data:
+                start_node = self.v[edge[0][0]]
+                end_node = self.v[edge[0][1]]
+                plt.arrow(start_node.location.x, start_node.location.y,
+                          end_node.location.x - start_node.location.x,
+                          end_node.location.y - start_node.location.y,
+                          head_width=0.2, head_length=0.2, fc='blue', ec='blue')
+
         plt.show()
 
     # TODO: update plot to better a visualization
@@ -280,7 +270,7 @@ class MTSP_DS_Solver:
         tours = self.getTrucksTour()
         for tour in tours:
             tuples_tour = tourToTuple(tour)
-            self.plot_arrows_between_nodes(tuples_tour)
+            self.plotNodes(tuples_tour)
 
     def getExecTime(self):
         return self.model.Runtime

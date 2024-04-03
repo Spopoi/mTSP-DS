@@ -8,14 +8,13 @@ from MTSP_DS_Solver import MTSP_DS_Solver
 def compute_average_solution(n, num_trials):
     execTimes = []
     for i in range(num_trials):
-        loc = [Location(100, 130), Location(100, 90), Location(120, 100), Location(100, 100), Location(49,49)]
-        solver = MTSP_DS_Solver(3, 2, 2, 2, alpha=4, custom_locations=loc)
+        # loc = [Location(100, 130), Location(100, 90), Location(120, 100), Location(100, 100), Location(49,49)]
+        solver = MTSP_DS_Solver(6, 1, 2, 2, alpha=1.5)
 
         solver.solve()
         execTime = solver.getExecTime()
         solver.printExecutionLog()
         execTimes.append(execTime)
-        solver.plotNodes()
         solver.plotTours()
     average_exec_time = np.mean(execTimes, axis=0)
     return average_exec_time
@@ -37,6 +36,6 @@ def plot_results_for_n(values, num_trials=1):
 
 
 if __name__ == "__main__":
-    n_values = [5, 10]
+    n_values = [3]
     plot_results_for_n(n_values)
 
