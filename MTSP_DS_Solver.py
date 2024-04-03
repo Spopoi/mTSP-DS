@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 class MTSP_DS_Solver:
     maxLocationBound = 150
 
-    def __init__(self, n, m, Dn=2, Kn=1, C=None, alpha=1.2, eps=100):
+    def __init__(self, n, m, Dn=2, Kn=1, C=None, alpha=1.2, eps=100, custom_locations=None):
         self.n = n  # customers
         self.m = m  # drone stations
         self.Dn = Dn  # num of drones per drone station
@@ -31,12 +31,12 @@ class MTSP_DS_Solver:
         self.D = np.arange(1, self.Dn + 1)
 
         self.v = []  # nodes
-        # self.v = np.empty(self.n + self.m + 2, dtype=Node)
         self.k = np.empty(self.Kn, dtype=Node)
-        # self.k = []  # trucks
 
-        self.initNodes()
-        # self.plotNodes()
+        if custom_locations is not None:
+            self.nodes_init(custom_locations)
+        else:
+            self.random_init()
 
         self.V = np.arange(len(self.v))
         self.Vl = self.V[:-1]
@@ -45,29 +45,30 @@ class MTSP_DS_Solver:
 
         self.t_ij, self.t_ij_drone = self.calculate_distance_matrices()
 
-        self.model = gp.Model("mTSP-DS")
-
-        # DECISION VARIABLES
-        # Makespan
-        self.tau = self.model.addVar(vtype=GRB.CONTINUOUS, name="tau")
-
-        # truck k traverse edge (i,j)
-        self.x_k_ij = self.model.addVars([(k, i, j) for k in self.K for i in self.Vl for j in self.Vr],
-                                         vtype=GRB.BINARY, name="x_k_ij")
-
-        # DS activation
-        self.z_s = self.model.addVars(self.Vs, vtype=GRB.INTEGER, name="z_s")
-
-        # time truck k arrives at node i
-        self.a_ki = self.model.addVars([(i, j) for i in self.K for j in self.V], vtype=GRB.CONTINUOUS, name="a_ki")
-
-        # customer j served by drone d from drone station s
-        self.y_d_sj = self.model.addVars([(d, s, j) for d in self.D for s in self.Vs for j in self.Vn],
-                                         vtype=GRB.BINARY, name="y_d_sj")
+        # init decision variables
+        self.y_d_sj = None
+        self.a_ki = None
+        self.z_s = None
+        self.x_k_ij = None
+        self.tau = None
+        self.model = None
         self.initModel()
 
-    def initNodes(self):
+    def nodes_init(self, locations):
+        self.k[:] = [Truck(i + 1, Location(0, 0)) for i in range(self.Kn)]
+        # starting depot
+        self.v.append(Depot(0, Location(0, 0)))
+        # customers:
+        for i in self.Vn:
+            self.v.append(Customer(i, locations[i-1]))
+        # Drone stations:
+        for j in self.Vs:
+            self.v.append(DroneStation(j, locations[j-1], self.Dn))
+        # Ending depot
+        self.v.append(Depot(self.n + self.m + 1, Location(0, 0)))
+        self.plotNodes()
 
+    def random_init(self):
         self.k[:] = [Truck(i, Location(0, 0)) for i in range(self.Kn)]
         # starting depot
         self.v.append(Depot(0, Location(0, 0)))
@@ -78,7 +79,8 @@ class MTSP_DS_Solver:
         for j in self.Vs:
             self.v.append(DroneStation(j, self.rand_location(), self.Dn))
         # Ending depot
-        self.v.append(Depot(self.n+self.m+1, Location(0, 0)))
+        self.v.append(Depot(self.n + self.m + 1, Location(0, 0)))
+        self.plotNodes()
 
     def rand_location(self):
         rand_x = np.random.randint(1, self.maxLocationBound)
@@ -122,6 +124,25 @@ class MTSP_DS_Solver:
         plt.show()
 
     def initModel(self):
+        self.model = gp.Model("mTSP-DS")
+
+        # DECISION VARIABLES
+        # Makespan
+        self.tau = self.model.addVar(vtype=GRB.CONTINUOUS, name="tau")
+
+        # truck k traverse edge (i,j)
+        self.x_k_ij = self.model.addVars([(k, i, j) for k in self.K for i in self.Vl for j in self.Vr],
+                                         vtype=GRB.BINARY, name="x_k_ij")
+
+        # DS activation
+        self.z_s = self.model.addVars(self.Vs, vtype=GRB.INTEGER, name="z_s")
+
+        # time truck k arrives at node i
+        self.a_ki = self.model.addVars([(i, j) for i in self.K for j in self.V], vtype=GRB.CONTINUOUS, name="a_ki")
+
+        # customer j served by drone d from drone station s
+        self.y_d_sj = self.model.addVars([(d, s, j) for d in self.D for s in self.Vs for j in self.Vn],
+                                         vtype=GRB.BINARY, name="y_d_sj")
         self.model.update()
         self.model.setObjective(self.tau, sense=GRB.MINIMIZE)
 
@@ -254,6 +275,7 @@ class MTSP_DS_Solver:
         plt.grid(True)
         plt.show()
 
+    # TODO: update plot to better a visualization
     def plotTours(self):
         tours = self.getTrucksTour()
         for tour in tours:

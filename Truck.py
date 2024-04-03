@@ -1,10 +1,11 @@
 class Truck:
     def __init__(self, index, location):
         self.index = index
-        self.location = location
+        self.x = location.x
+        self.y = location.y
 
     def __repr__(self):
         return (
             f"Truck index: {self.index}\n"
-            f"Truck location: {self.location}\n"
+            f"Truck location: ({self.x}, {self.y})\n"
         )
