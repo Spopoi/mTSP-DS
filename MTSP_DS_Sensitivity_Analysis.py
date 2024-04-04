@@ -1,15 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from Location import Location
-from MTSP_DS_Solver import MTSP_DS_Solver
+from MTSP_DS_MILP_Solver import MTSP_DS_MILP_Solver
 
 
 def compute_average_solution(n, num_trials):
     execTimes = []
     for i in range(num_trials):
         # loc = [Location(100, 130), Location(100, 90), Location(120, 100), Location(100, 100), Location(49,49)]
-        solver = MTSP_DS_Solver(6, 1, 2, 2, alpha=1.5)
+        solver = MTSP_DS_MILP_Solver(6, 1, 2, 2)
 
         solver.solve()
         execTime = solver.getExecTime()
