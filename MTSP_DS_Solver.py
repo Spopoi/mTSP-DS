@@ -5,7 +5,7 @@ import numpy as np
 from gurobipy import GRB
 from Node import Node
 from Customer import Customer
-from TourUtils import get_k_value, getVisitedNodesIndex, generate_sub_tours_indexes, tourToTuple
+from TourUtils import get_k_value, tourToTuple
 from Truck import Truck
 from DroneStation import DroneStation
 from Location import Location
@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 class MTSP_DS_Solver:
     maxLocationBound = 150
 
-    def __init__(self, n, m, Dn=2, Kn=1, C=None, alpha=1.2, eps=100, custom_locations=None):
+    def __init__(self, n, m, Dn=2, Kn=1, C=None, alpha=1.2, eps=100, nodes=None, custom_locations=None):
         self.n = n  # customers
         self.m = m  # drone stations
         self.Dn = Dn  # num of drones per drone station
@@ -25,8 +25,8 @@ class MTSP_DS_Solver:
         self.alpha = alpha  # drone velocity factor relative to truck speed (>1 means drone faster than truck)
         self.eps = eps  # eps = 200  # max drone distance
 
-        self.Vn = np.arange(1, self.n + 1)
         self.K = np.arange(1, self.Kn + 1)
+        self.Vn = np.arange(1, self.n + 1)
         self.Vs = np.arange(self.n + 1, self.n + self.m + 1)
         self.D = np.arange(1, self.Dn + 1)
 
@@ -35,36 +35,37 @@ class MTSP_DS_Solver:
 
         self.model = gp.Model("mTSP-DS")
 
-        if custom_locations is not None:
-            self.nodes_init(custom_locations)
-        else:
-            self.random_init()
-
-    def nodes_init(self, locations):
         self.k[:] = [Truck(i + 1, Location(0, 0)) for i in range(self.Kn)]
         # starting depot
         self.v.append(Depot(0, Location(0, 0)))
+
+        if nodes is not None:
+            self.v.extend([node for node in nodes])
+            # TODO: maybe remove custom_locations
+        elif custom_locations is not None:
+            self.nodes_init(custom_locations)
+        else:
+            self.random_init()
+        # Ending depot
+        self.v.append(Depot(self.n + self.m + 1, Location(0, 0)))
+        self.plotNodes()
+
+    def nodes_init(self, locations):
         # customers:
         for i in self.Vn:
             self.v.append(Customer(i, locations[i-1]))
         # Drone stations:
         for j in self.Vs:
             self.v.append(DroneStation(j, locations[j-1], self.Dn))
-        # Ending depot
-        self.v.append(Depot(self.n + self.m + 1, Location(0, 0)))
-        self.plotNodes()
 
     def random_init(self):
-        self.k[:] = [Truck(i, Location(0, 0)) for i in range(self.Kn)]
-        # starting depot
-        self.v.append(Depot(0, Location(0, 0)))
         # customers:
         for i in self.Vn:
             self.v.append(Customer(i, self.rand_location()))
         # Drone stations:
         for j in self.Vs:
             self.v.append(DroneStation(j, self.rand_location(), self.Dn))
-        # Ending depot
+
         self.v.append(Depot(self.n + self.m + 1, Location(0, 0)))
         self.plotNodes()
 
@@ -107,6 +108,22 @@ class MTSP_DS_Solver:
             truck_k_tour.append(var_list)
         return truck_k_tour
 
+    def NodesTour(self):
+        nodes_tours = []
+        tours = self.getTrucksTour()
+        # print(tours)
+        for tour in tours:
+            tour_tuples = tourToTuple(tour)
+            #print(tour_tuples)
+            tour_node = []
+            for tour_tuple in tour_tuples:
+                #print(self.v[tour_tuple[0]].index)
+                # node_i = Node.node_index_map[tour_tuple[0]]
+                # tour_node.append(node_i)
+                tour_node.append(self.v[tour_tuple[0]])
+            nodes_tours.append(tour_node)
+        return nodes_tours
+
     def getSolution(self):
         return self.model.ObjVal
 
@@ -136,8 +153,8 @@ class MTSP_DS_Solver:
 
         if data:
             for edge in data:
-                start_node = self.v[edge[0][0]]
-                end_node = self.v[edge[0][1]]
+                start_node = self.v[edge[0]]
+                end_node = self.v[edge[1]]
                 plt.arrow(start_node.location.x, start_node.location.y,
                           end_node.location.x - start_node.location.x,
                           end_node.location.y - start_node.location.y,
@@ -150,6 +167,7 @@ class MTSP_DS_Solver:
         tours = self.getTrucksTour()
         for tour in tours:
             tuples_tour = tourToTuple(tour)
+            # print(tuples_tour)
             self.plotNodes(tuples_tour)
 
     def getExecTime(self):

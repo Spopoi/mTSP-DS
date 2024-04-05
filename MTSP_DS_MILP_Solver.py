@@ -10,8 +10,8 @@ from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes
 
 class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
 
-    def __init__(self, n, m, Dn=2, Kn=1, C=None, alpha=1.2, eps=100, custom_locations=None):
-        super().__init__(n, m, Dn, Kn, C, alpha, eps, custom_locations)
+    def __init__(self, n, m, Dn=2, Kn=1, C=None, alpha=1.2, eps=100, nodes=None, custom_locations=None):
+        super().__init__(n, m, Dn, Kn, C, alpha, eps, nodes, custom_locations)
 
         self.V = np.arange(len(self.v))
         self.Vl = self.V[:-1]

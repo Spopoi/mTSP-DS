@@ -8,12 +8,15 @@ class NodeType(Enum):
 
 
 class Node:
-    def __init__(self, location, node_type):
+
+    def __init__(self, location, node_type, index):
         self.location = location
         self.node_type = node_type
+        self.index = index
 
     def __repr__(self):
         return (
+            f"Node index: {self.index}\n"
             f"Node Location: {self.location}\n"
             f"Node Type: {self.node_type.value}"
         )

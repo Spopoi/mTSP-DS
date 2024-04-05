@@ -32,13 +32,13 @@ def varToTupleIndex(var):
 def tourToTuple(tour):
     ordered_tuple_tour = []
     tuple_tour = [varToTupleIndex(var) for var in tour]
-    filtered_tuple = list(filter(lambda x: x[0] == 0, tuple_tour))
+    filtered_tuple = list(filter(lambda x: x[0] == 0, tuple_tour))[0]
     ordered_tuple_tour.append(filtered_tuple)
-    tuple_tour.remove(filtered_tuple[0])  # remove visited tuple to improve efficiency
+    tuple_tour.remove(filtered_tuple)  # remove visited tuple to improve efficiency
     for i in range(len(tuple_tour)):
-        nextTuple = list(filter(lambda x: x[0] == filtered_tuple[0][1], tuple_tour))
+        nextTuple = list(filter(lambda x: x[0] == filtered_tuple[1], tuple_tour))[0]
         ordered_tuple_tour.append(nextTuple)
-        tuple_tour.remove(nextTuple[0])
+        tuple_tour.remove(nextTuple)
         filtered_tuple = nextTuple
     return ordered_tuple_tour
 
