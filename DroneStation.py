@@ -11,7 +11,6 @@ class DroneStation(Node):
     def __repr__(self):
         drones_info = "\n".join([repr(drone) for drone in self.drones])
         return (
-            f"Station Index: {self.index}\n"
             f"{super().__repr__()}\n"
             f"Drones:\n{drones_info}"
         )

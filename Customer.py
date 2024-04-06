@@ -8,7 +8,6 @@ class Customer(Node):
 
     def __repr__(self):
         return (
-            f"Customer Index: {self.index}\n"
-            f"{super().__repr__()}\n"
+            f"{super().__repr__()}, "
             f"Customer Package Demand: {self.package_demand}"
         )

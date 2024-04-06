@@ -111,13 +111,10 @@ class MTSP_DS_Solver:
     def NodesTour(self):
         nodes_tours = []
         tours = self.getTrucksTour()
-        # print(tours)
         for tour in tours:
             tour_tuples = tourToTuple(tour)
-            #print(tour_tuples)
             tour_node = []
             for tour_tuple in tour_tuples:
-                #print(self.v[tour_tuple[0]].index)
                 # node_i = Node.node_index_map[tour_tuple[0]]
                 # tour_node.append(node_i)
                 tour_node.append(self.v[tour_tuple[0]])

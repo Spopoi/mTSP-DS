@@ -16,8 +16,8 @@ class Node:
 
     def __repr__(self):
         return (
-            f"Node index: {self.index}\n"
-            f"Node Location: {self.location}\n"
+            f"Node index: {self.index}, "
+            f"Node Location: {self.location}, "
             f"Node Type: {self.node_type.value}"
         )
 

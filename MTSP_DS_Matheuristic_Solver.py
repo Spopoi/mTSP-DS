@@ -29,22 +29,50 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
         mtsp_solver = MTSP_DS_MILP_Solver(len(nodes), 0, 0, self.Kn,
                                           0, self.alpha, self.eps, nodes=nodes)
         mtsp_solver.solve()
-        # mtsp_solver.plotTours()
-        return mtsp_solver.NodesTour()
+        mtsp_solver.plotTours()
+        tours = mtsp_solver.NodesTour()
+        for tour in tours:
+            tour.append(self.v[-1])
+        return tours
 
     def solve(self):
         solution_pool = []
-        #print(self.d_station_combos)
+        # print(self.d_station_combos)
         for d_station_combo in self.d_station_combos:
             solution = self.get_mtsp_tours(d_station_combo)
-            solution.append(self.v[-1])
             for d_station in d_station_combo:
                 solution = self.solve_local_dasp(solution, d_station)
             solution_pool.append(solution)
         print(solution_pool)
 
     def solve_local_dasp(self, solution, d_station):
-        pass
+        # print(d_station)
+        starter_nodes = self.get_starter_nodes(solution, d_station)
+        # for node in solution:
+        # print("Nodo :", node)
+
+    def get_starter_nodes(self, solution, d_station):
+        starter_nodes = []
+        # for each truck tour
+        for i in range(len(solution)):
+            # for each node
+            for j in range(len(solution[i])):
+                node = solution[i][j]
+                # print(f"Station= {d_station} location = {self.v[d_station].location}")
+                # print(f"Node {node.index} Location = {node.location}")
+                # print("distance=", node.node_distance(self.v[d_station]))
+                # print("eps=", self.eps / 2)
+                # print("RESULT= ", node.node_distance(self.v[d_station]) <= self.eps / 2)
+                if node != self.v[d_station] and node.node_distance(self.v[d_station]) <= self.eps / 2:
+                    if j > 0:
+                        if solution[i][j-1] not in starter_nodes:
+                            starter_nodes.append(solution[i][j-1])
+                    else:
+                        if solution[i][j] not in starter_nodes:
+                            starter_nodes.append(solution[i][j])
+                    break
+        # print(starter_nodes)
+        return starter_nodes
 
 
 if __name__ == "__main__":

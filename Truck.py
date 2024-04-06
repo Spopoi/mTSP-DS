@@ -6,6 +6,6 @@ class Truck:
 
     def __repr__(self):
         return (
-            f"Truck index: {self.index}\n"
-            f"Truck location: ({self.x}, {self.y})\n"
+            f"Truck index: {self.index}, "
+            f"Truck location: ({self.x}, {self.y})"
         )
