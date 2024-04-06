@@ -128,25 +128,40 @@ class MTSP_DS_Solver:
         x_values = [node.location.x for node in self.v]
         y_values = [node.location.y for node in self.v]
 
-        colors = ['blue' if isinstance(node, Customer) else 'red' if isinstance(node, DroneStation) else 'black'
-                  for node in self.v]
+        # Aggiungiamo un'identificazione per i tipi di nodo
+        node_types = ['customer' if isinstance(node, Customer) else 'drone_station' if isinstance(node, DroneStation) else 'depot'
+                      for node in self.v]
 
-        plt.scatter(x_values, y_values, color=colors, label="Nodes")
+        plt.scatter(x_values, y_values, color='black', label="Nodes")
         plt.xlabel("X")
         plt.ylabel("Y")
         plt.title("Nodes plot")
 
-        for node in self.v[:-1]:
+        for node, node_type in zip(self.v[:-1], node_types[:-1]):
             plt.annotate(str(node.index), (node.location.x, node.location.y), textcoords="offset points",
                          xytext=(0, 10),
                          ha='center')
 
+        for node, node_type in zip(self.v, node_types):
+            if node_type == 'customer':
+                plt.plot(node.location.x, node.location.y, 'bo', markersize=8)
+            elif node_type == 'drone_station':
+                plt.plot(node.location.x, node.location.y, 'r*', markersize=10)
+            else:  # depot
+                plt.plot(node.location.x, node.location.y, 'kD', markersize=7)
+
         blue_patch = plt.Line2D([0], [0], marker='o', color='w', label='Customer', markerfacecolor='blue',
                                 markersize=10)
-        red_patch = plt.Line2D([0], [0], marker='o', color='w', label='Drone Station', markerfacecolor='red',
+        red_patch = plt.Line2D([0], [0], marker='s', color='w', label='Drone Station', markerfacecolor='red',
                                markersize=10)
         black_patch = plt.Line2D([0], [0], marker='o', color='w', label='Depot', markerfacecolor='black', markersize=10)
         plt.legend(handles=[black_patch, red_patch, blue_patch])
+
+        # Aggiungi cerchi tratteggiati intorno ai nodi di tipo DroneStation
+        for node, node_type in zip(self.v, node_types):
+            if node_type == 'drone_station':
+                circle = plt.Circle((node.location.x, node.location.y), self.eps/2, color='red', fill=False, linestyle='dashed')
+                plt.gca().add_patch(circle)
 
         if data:
             for edge in data:
