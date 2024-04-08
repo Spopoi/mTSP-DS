@@ -119,6 +119,7 @@ class MTSP_DS_Solver:
                 # tour_node.append(node_i)
                 tour_node.append(self.v[tour_tuple[0]])
             nodes_tours.append(tour_node)
+        print(nodes_tours)
         return nodes_tours
 
     def getSolution(self):
