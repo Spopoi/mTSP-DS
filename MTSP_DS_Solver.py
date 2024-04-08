@@ -119,7 +119,7 @@ class MTSP_DS_Solver:
                 # tour_node.append(node_i)
                 tour_node.append(self.v[tour_tuple[0]])
             nodes_tours.append(tour_node)
-        print(nodes_tours)
+        # print(nodes_tours)
         return nodes_tours
 
     def getSolution(self):
@@ -129,7 +129,6 @@ class MTSP_DS_Solver:
         x_values = [node.location.x for node in self.v]
         y_values = [node.location.y for node in self.v]
 
-        # Aggiungiamo un'identificazione per i tipi di nodo
         node_types = ['customer' if isinstance(node, Customer) else 'drone_station' if isinstance(node, DroneStation) else 'depot'
                       for node in self.v]
 
@@ -158,7 +157,6 @@ class MTSP_DS_Solver:
         black_patch = plt.Line2D([0], [0], marker='o', color='w', label='Depot', markerfacecolor='black', markersize=10)
         plt.legend(handles=[black_patch, red_patch, blue_patch])
 
-        # Aggiungi cerchi tratteggiati intorno ai nodi di tipo DroneStation
         for node, node_type in zip(self.v, node_types):
             if node_type == 'drone_station':
                 circle = plt.Circle((node.location.x, node.location.y), self.eps/2, color='red', fill=False, linestyle='dashed')

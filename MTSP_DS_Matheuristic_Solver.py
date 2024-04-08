@@ -59,5 +59,5 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
 
 
 if __name__ == "__main__":
-    solver = MTSP_DS_Matheuristic_Solver(8, 1, 2, 2, 1, eps=150)
+    solver = MTSP_DS_Matheuristic_Solver(9, 1, 2, 2, 1, eps=150)
     solver.solve()
