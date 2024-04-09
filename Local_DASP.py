@@ -41,7 +41,8 @@ class Local_DASP:
         Vn = []
         for tour in self.tours:
             for node in tour:
-                if node.node_type == NodeType.CUSTOMER and node.node_distance(self.model.v[self.d_station]) <= self.model.eps / 2:
+                if node.node_type == NodeType.CUSTOMER and node.node_distance(
+                        self.model.v[self.d_station]) <= self.model.eps / 2:
                     Vn.append(node)
         return Vn
 
@@ -70,31 +71,43 @@ class Local_DASP:
         print("Local tours= ", self.local_tours)
         print("Outliers= ", self.O)
 
+    # def get_outlier_nodes(self):
+    #     for i in range(len(self.local_tours)):
+    #         # for each node
+    #         for j in range(len(self.local_tours[i])):
+    #             node = self.local_tours[i][j]
+    #             if node.node_type == NodeType.CUSTOMER and node.node_distance(self.model.v[self.d_station]) > self.model.eps / 2:
+    #                 self.V_OS.append(node)
+    #                 if len(self.local_tours[i]) == 1:
+    #                     oe_node = node
+    #                 else:
+    #                     oe_node = self.get_end_outlier(i, j+1)
+    #                 self.V_OE.append(oe_node)
+    #                 # TODO: verify it works
+    #                 j = self.local_tours[i].index(oe_node)+1
+    #                 self.O.append((node, oe_node))
     def get_outlier_nodes(self):
         for i in range(len(self.local_tours)):
-            # for each node
-            for j in range(len(self.local_tours[i])):
+            j = 0
+            while j < len(self.local_tours[i]):
                 node = self.local_tours[i][j]
-                if node.node_type == NodeType.CUSTOMER and node.node_distance(self.model.v[self.d_station]) > self.model.eps / 2:
+                if node.node_type == NodeType.CUSTOMER and node.node_distance(
+                        self.model.v[self.d_station]) > self.model.eps / 2:
                     self.V_OS.append(node)
                     if len(self.local_tours[i]) == 1:
                         oe_node = node
                     else:
-                        oe_node = self.get_end_outlier(i, j+1)
+                        oe_node = self.get_end_outlier(i, j + 1)
                     self.V_OE.append(oe_node)
                     # TODO: verify it works
-                    j = self.local_tours[i].index(oe_node)
+                    j = self.local_tours[i].index(oe_node) + 1
                     self.O.append((node, oe_node))
-                    break
+                else:
+                    j += 1  # Se non è un nodo outlier, passa al prossimo
 
-    def get_end_outlier(self, tour_index, node_index):
-        for i in range(tour_index, len(self.local_tours)):
-            # for each node
-            for j in range(node_index, len(self.local_tours[i])):
-                node = self.local_tours[i][j]
-                if node.node_distance(self.model.v[self.d_station]) <= self.model.eps / 2:
-                    return self.local_tours[i][j-1]
-
-
-
-
+    def get_end_outlier(self, tour_k, node_index):
+        # for each node
+        for j in range(node_index, len(self.local_tours[tour_k])):
+            node = self.local_tours[tour_k][j]
+            if node.node_distance(self.model.v[self.d_station]) <= self.model.eps / 2:
+                return self.local_tours[tour_k][j - 1]
