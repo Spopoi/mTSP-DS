@@ -16,6 +16,19 @@ class Local_DASP:
         self.Vn = self.get_ds_customers()
         self.V_end = self.get_end_nodes()
         self.get_outlier_nodes()
+
+        self.Vl = []
+        self.Vl.extend(self.V_start)
+        self.Vl.extend(self.Vn)
+        self.Vl.extend(self.model.v[d_station])
+        self.Vl.extend(self.V_OE)
+
+        self.Vr = []
+        self.Vr.extend(self.Vn)
+        self.Vr.extend(self.model.v[d_station])
+        self.Vr.extend(self.V_OS)
+        self.Vr.extend(self.V_end)
+
         # self.Vos, self.Voe = self.get_outlier_nodes()
 
     def get_starter_nodes(self):
@@ -70,6 +83,7 @@ class Local_DASP:
         # print("tour_nodes", self.Vn)
         print("Local tours= ", self.local_tours)
         print("Outliers= ", self.O)
+
 
     # def get_outlier_nodes(self):
     #     for i in range(len(self.local_tours)):
