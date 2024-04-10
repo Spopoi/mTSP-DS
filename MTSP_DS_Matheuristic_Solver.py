@@ -3,7 +3,6 @@ import itertools
 from Local_DASP import Local_DASP
 from MTSP_DS_MILP_Solver import MTSP_DS_MILP_Solver
 from MTSP_DS_Solver import MTSP_DS_Solver
-from Node import NodeType
 
 
 class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):

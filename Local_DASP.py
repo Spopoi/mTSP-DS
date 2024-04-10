@@ -8,6 +8,7 @@ class Local_DASP:
         self.d_station = d_station
         # print(d_station)
         # TODO: check local_tours, may not be present ds in the local tour
+        # TODO: double end depot in self.model.v
         self.local_tours = []
         self.V_OS = []
         self.V_OE = []
@@ -20,14 +21,17 @@ class Local_DASP:
         self.Vl = []
         self.Vl.extend(self.V_start)
         self.Vl.extend(self.Vn)
-        self.Vl.extend(self.model.v[d_station])
+        self.Vl.append(self.model.v[d_station])
         self.Vl.extend(self.V_OE)
+
+        print("Vl = ", self.Vl)
 
         self.Vr = []
         self.Vr.extend(self.Vn)
-        self.Vr.extend(self.model.v[d_station])
+        self.Vr.append(self.model.v[d_station])
         self.Vr.extend(self.V_OS)
         self.Vr.extend(self.V_end)
+        print("Vr = ", self.Vr)
 
         # self.Vos, self.Voe = self.get_outlier_nodes()
 
@@ -79,9 +83,9 @@ class Local_DASP:
 
     def solve(self):
         print("start", self.V_start)
-        # print("end", self.V_end)
-        # print("tour_nodes", self.Vn)
-        print("Local tours= ", self.local_tours)
+        print("end", self.V_end)
+        print("tour_nodes", self.Vn)
+        # print("Local tours= ", self.local_tours)
         print("Outliers= ", self.O)
 
 

@@ -1,8 +1,5 @@
-import itertools
-
 import gurobipy as gp
 import numpy as np
-from gurobipy import GRB
 from Node import Node
 from Customer import Customer
 from TourUtils import get_k_value, tourToTuple
@@ -65,9 +62,7 @@ class MTSP_DS_Solver:
         # Drone stations:
         for j in self.Vs:
             self.v.append(DroneStation(j, self.rand_location(), self.Dn))
-
-        self.v.append(Depot(self.n + self.m + 1, Location(0, 0)))
-        self.plotNodes()
+        # self.plotNodes()
 
     def rand_location(self):
         rand_x = np.random.randint(1, self.maxLocationBound)

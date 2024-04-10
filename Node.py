@@ -16,10 +16,14 @@ class Node:
 
     def __repr__(self):
         return (
-            f"Node index: {self.index}, "
-            f"Node Location: {self.location}, "
-            f"Node Type: {self.node_type.value}"
+            f"{self.node_type.value} {self.index}"
         )
+    # def __repr__(self):
+    #     return (
+    #         f"Node index: {self.index}, "
+    #         f"Node Location: {self.location}, "
+    #         f"Node Type: {self.node_type.value}"
+    #     )
 
     def node_distance(self, other_node):
         return self.location.euclidean_distance(other_node.location)

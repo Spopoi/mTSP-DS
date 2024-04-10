@@ -7,7 +7,9 @@ class Customer(Node):
         self.package_demand = package_demand
 
     def __repr__(self):
-        return (
-            f"{super().__repr__()}, "
-            f"Customer Package Demand: {self.package_demand}"
-        )
+        return super().__repr__()
+    # def __repr__(self):
+    #     return (
+    #         f"{super().__repr__()}, "
+    #         f"Customer Package Demand: {self.package_demand}"
+    #     )
