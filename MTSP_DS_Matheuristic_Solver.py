@@ -39,22 +39,16 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
         solution_pool = []
         # print(self.d_station_combos)
         for d_station_combo in self.d_station_combos:
-            solution = self.get_mtsp_tours(d_station_combo)
+            solution = {"tours": [], "assigned_customers": []}
+            solution["tours"].extend(self.get_mtsp_tours(d_station_combo))
+
+            # solution = self.get_mtsp_tours(d_station_combo)
             for d_station in d_station_combo:
                 # solution = self.solve_local_dasp(solution, d_station)
                 local_dasp = Local_DASP(self, solution, d_station)
                 solution = local_dasp.solve()
             solution_pool.append(solution)
         # print(solution_pool)
-
-    # def solve_local_dasp(self, solution, d_station):
-    #     # print(d_station)
-    #     V_start = self.get_starter_nodes(solution, d_station)
-    #     Vn = self.get_ds_custumers(solution, d_station)
-    #     V_end = self.get_end_nodes(solution, d_station)
-    #     Vos, Voe = self.get_outlier_nodes(solution, d_station, )
-    #     # for node in solution:
-    #     # print("Nodo :", node)
 
 
 if __name__ == "__main__":
