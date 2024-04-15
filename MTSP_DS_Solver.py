@@ -45,6 +45,9 @@ class MTSP_DS_Solver:
             self.random_init()
         # Ending depot
         self.v.append(Depot(self.n + self.m + 1, Location(0, 0)))
+
+        print("v= ", self.v)
+        self.t_ij, self.t_ij_drone = self.calculate_distance_matrices()
         self.plotNodes()
 
     def nodes_init(self, locations):

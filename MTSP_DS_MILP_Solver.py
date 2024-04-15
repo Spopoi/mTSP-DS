@@ -18,7 +18,7 @@ class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
         self.Vr = self.V[1:]
         self.H = list(itertools.chain(self.Vn, self.Vs))  # Vn u Vs
 
-        self.t_ij, self.t_ij_drone = self.calculate_distance_matrices()
+        # self.t_ij, self.t_ij_drone = self.calculate_distance_matrices()
 
         # init decision variables
         self.y_d_sj = None

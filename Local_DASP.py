@@ -49,17 +49,27 @@ class Local_DASP:
         self.V.extend(self.V_end)
 
         # TODO: repetitions allowed?
-        self.V_index = [node.index for node in self.V]
-        self.Vl_index = [node.index for node in self.Vl]
-        self.Vr_index = [node.index for node in self.Vr]
+        # self.V_index = [node.index for node in self.V]
+        # self.Vl_index = [node.index for node in self.Vl]
+        # #print("Vl_indexes: ", self.Vl_index)
+        # self.Vr_index = [node.index for node in self.Vr]
+
+        self.V_index = range(len(self.V))
+        self.Vl_index = range(len(self.Vl))
+        print("Vl_indexes: ", self.Vl_index)
+        self.Vr_index = range(len(self.Vr))
+        self.K = range(1, len(self.dasp_tours)+1)
+        self.k = len(self.dasp_tours)
 
         self.model = None
         self.tau_tilde = None
         self.x_k_ij = None
         self.y_d_j = None
         self.a_ki = None
+        self.x_k_ij_outliers = None
         self.init_model()
 
+    # TODO: check case in which the only node in ds range is depot
     def get_starter_nodes(self):
         starter_nodes = []
         # for each truck tour
@@ -68,19 +78,23 @@ class Local_DASP:
             # for each node
             for j in range(1, len(self.tours[i])):
                 node = self.tours[i][j]
+                # print((i, j), node)
                 # print(f"Station= {d_station} location = {self.v[d_station].location}")
                 # print(f"Node {node.index} Location = {node.location}")
                 # print("distance=", node.node_distance(self.v[d_station]))
                 # print("eps=", self.eps / 2)
                 # print("RESULT= ", node.node_distance(self.v[d_station]) <= self.eps / 2)
-                if node.node_type == NodeType.CUSTOMER and node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
+                # if node.node_type == NodeType.CUSTOMER and node.node_distance(self.milp_model.v[self.d_station])
+                # <= self.milp_model.eps / 2:
+                # TODO: check, is considered also the case in which the only node in range of ds is ds itself
+                if node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
                     # starter_nodes.append((i, self.tours[i][j - 1]))
                     starter_nodes.append(self.tours[i][j - 1])
                     self.local_tours[i] = self.tours[i][j:]
                     if self.tours[i] not in self.dasp_tours:
                         self.dasp_tours.append(self.tours[i])
                     break
-        # print(self.dasp_tours)
+        print("dasp_tours: ", self.dasp_tours)
         return starter_nodes
 
     def get_ds_customers(self):
@@ -95,14 +109,11 @@ class Local_DASP:
 
     def get_end_nodes(self):
         end_nodes = []
-        print("starting end nodes, nodes: ", self.tours)
         # for each truck tour
         for i in range(len(self.tours)):
             # for each node
             for j in range(len(self.tours[i])-1, -1, -1):
                 node = self.tours[i][j]
-                print(len(self.tours[i]))
-                print(j)
                 if node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
                     # end_nodes.append((i, self.tours[i][j + 1]))
                     if j == len(self.tours[i]) - 1:
@@ -120,7 +131,7 @@ class Local_DASP:
     def solve(self):
         print("start", self.V_start)
         print("end", self.V_end)
-        print("tour_nodes", self.Vn)
+        # print("tour_nodes", self.Vn)
         # print("Local tours= ", self.local_tours)
         print("Outliers= ", self.O)
 
@@ -155,19 +166,38 @@ class Local_DASP:
 
         # DECISION VARIABLES
         # Makespan
-        self.tau_tilde = self.model.addVar(vtype=GRB.CONTINUOUS, name="tau")
+        self.tau_tilde = self.model.addVar(vtype=GRB.CONTINUOUS, name="tau_tilde")
 
         # truck k traverse edge (i,j)
         # TODO: add (os,oe) pairs
-        # self.x_k_ij = self.model.addVars([(k, i, j) for k in self.milp_model.K for i in self.Vl_index
-        #                                   for j in self.Vr_index], vtype=GRB.BINARY, name="x_k_ij")
-        #
-        # # time truck k arrives at node i
-        # self.a_ki = self.model.addVars([(i, j) for i in self.milp_model.K for j in self.V_index],
-        #                                vtype=GRB.CONTINUOUS, name="a_ki")
-        #
-        # # customer j served by drone d from drone station s
-        # self.y_d_j = self.model.addVars([(d, j) for d in self.milp_model.D for j in self.Vn_index],
-        #                                 vtype=GRB.BINARY, name="y_d_j")
-        # self.model.update()
-        # self.model.setObjective(self.tau_tilde, sense=GRB.MINIMIZE)
+        self.x_k_ij = self.model.addVars([(k, i, j) for k in self.K for i in self.Vl_index
+                                          for j in self.Vr_index], vtype=GRB.BINARY, name="x_k_ij")
+
+        self.x_k_ij_outliers = self.model.addVars([(k, i, j) for k in self.K for (i, j) in self.O],
+                                                  vtype=GRB.BINARY, name="x_k_ij_outliers")
+
+        # time truck k arrives at node i
+        self.a_ki = self.model.addVars([(i, j) for i in self.K for j in self.V_index],
+                                       vtype=GRB.CONTINUOUS, name="a_ki")
+
+        # customer j served by drone d from drone station s
+        self.y_d_j = self.model.addVars([(d, j) for d in self.milp_model.D for j in self.Vn_index],
+                                        vtype=GRB.BINARY, name="y_d_j")
+        self.model.update()
+        self.model.setObjective(self.tau_tilde, sense=GRB.MINIMIZE)
+
+        # CONSTRAINTS
+        # Constraint (16)
+        end_k = self.k + len(self.Vn) + 2*len(self.O)
+        print(self.V)
+        self.model.addConstrs((self.a_ki[k, end_k + k] <= self.tau_tilde for k in self.K), name="(16)")
+
+        # Constraint (17)
+        ds_dasp_index = self.k + len(self.Vn)
+        self.model.addConstrs((self.a_ki[k, ds_dasp_index] + gp.quicksum(
+            2 * self.milp_model.t_ij_drone[self.d_station, j] * self.y_d_j[d, j] for j in self.Vn_index) <= self.tau_tilde
+                               for k in self.K for d in self.milp_model.D), name="(17)")
+
+        self.model.update()
+        self.model.write("modello_matheuristic.lp")
+
