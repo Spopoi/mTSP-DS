@@ -1,7 +1,5 @@
 from itertools import chain
 
-import numpy as np
-
 from Node import NodeType
 from gurobipy import gurobipy as gp, GRB
 
@@ -10,12 +8,9 @@ class Local_DASP:
     def __init__(self, model, solution, d_station):
         self.milp_model = model
         self.tours = solution["tours"]
-        # print(self.tours)
         self.dasp_tours = []
-        # self.dasp_tours = self.get_local_dasp_tours(self.tours)
         self.assigned_customers = solution["assigned_customers"]
         self.d_station = d_station
-        # print(d_station)
         # TODO: check local_tours, may not be present ds in the local tour
         self.local_tours = []
         self.V_OS = []
@@ -23,7 +18,6 @@ class Local_DASP:
         self.O = []
         self.V_start = self.get_starter_nodes()
         self.Vn = self.get_ds_customers()
-        # self.Vn_index = [node.index for node in self.Vn]
         print("Vn = ", self.Vn)
         self.V_end = self.get_end_nodes()
         self.get_outlier_nodes()
@@ -50,19 +44,10 @@ class Local_DASP:
         self.V.extend(self.V_OE)
         self.V.extend(self.V_end)
 
-        # self.V_index = [node.index for node in self.V]
-        # self.Vl_index = [node.index for node in self.Vl]
-        # #print("Vl_indexes: ", self.Vl_index)
-        # self.Vr_index = [node.index for node in self.Vr]
-
         self.V_index = range(len(self.V))
         print("V_indexes: ", self.V_index)
         print("V: ", self.V)
 
-        # self.Vl_index = range(len(self.Vl))
-        # print("Vl_indexes: ", self.Vl_index)
-        # self.Vr_index = range(len(self.Vr))
-        # self.K = range(1, len(self.dasp_tours)+1)
         self.K = range(1, len(self.dasp_tours) + 1)
         self.k = len(self.dasp_tours)
 
@@ -80,15 +65,11 @@ class Local_DASP:
             chain(self.Vr_index, self.V_index[vr_index+len(self.V_OE):]))
         print("Vr_indexes: ", self.Vr_index)
 
-        # self.O_index = [(i, j) for i in self.V_index[vl_index:vl_index+len(self.V_OS)]
-        # for j in self.V_index[vr_index:vr_index+len(self.V_OE)]]
-
         self.V_OS_index = self.V_index[vl_index:vl_index+len(self.V_OS)]
         self.V_OE_index = self.V_index[vr_index:vr_index+len(self.V_OE)]
 
         self.O_index = list(zip(self.V_OS_index, self.V_OE_index))
         print("O_index: ", self.O_index)
-        # self.k = len(self.dasp_tours)
 
         self.V_end_index = self.V_index[-self.k:]
 
@@ -132,30 +113,23 @@ class Local_DASP:
 
     def get_end_nodes(self):
         end_nodes = []
-        # for each truck tour
         for i in range(len(self.tours)):
-            # for each node
             for j in range(len(self.tours[i])-1, -1, -1):
                 node = self.tours[i][j]
                 if node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
-                    # end_nodes.append((i, self.tours[i][j + 1]))
                     if j == len(self.tours[i]) - 1:
                         end_nodes.append(self.tours[i][j])
                     else:
                         end_nodes.append(self.tours[i][j + 1])
 
-                    # Rimuovi tutti gli elementi dopo 'node' in 'self.local_tours[i]'
                     node_index = self.local_tours[i].index(node)
                     self.local_tours[i] = self.local_tours[i][:node_index + 1]
                     break
-        # print("end nodes: ", end_nodes)
         return end_nodes
 
     def solve(self):
         print("start", self.V_start)
         print("end", self.V_end)
-        # print("tour_nodes", self.Vn)
-        # print("Local tours= ", self.local_tours)
         print("Outliers= ", self.O)
 
     def get_outlier_nodes(self):
@@ -171,7 +145,6 @@ class Local_DASP:
                     else:
                         oe_node = self.get_end_outlier(i, j + 1)
                     self.V_OE.append(oe_node)
-                    # TODO: verify it works
                     j = self.local_tours[i].index(oe_node) + 1
                     self.O.append((node, oe_node))
                 else:
@@ -227,14 +200,22 @@ class Local_DASP:
 
         # Constraint (19.1)
         second_step_node_indexes = list(chain(self.Vn_index, [ds_dasp_index], self.V_OS_index, self.V_end_index))
-        print("Second_step: ", second_step_node_indexes)
 
         self.model.addConstrs((gp.quicksum(self.x_k_ij[k, k-1, j] for j in second_step_node_indexes) == 1
                                for k in self.K), name="(19.1)")
 
         # Constraint (19.2)
-        # self.model.addConstrs(
-        #     (gp.quicksum(self.x_k_ij[k, i, 1 + self.n + self.m] for i in self.Vn_index) == 1 for k in self.K), name="(19.2)")
+        next_to_last_node_indexes = list(chain(self.Vn_index, [ds_dasp_index], self.V_OE_index, self.V_index[:self.k]))
+        self.model.addConstrs(
+            (gp.quicksum(self.x_k_ij[k, i, self.V_end_index[k-1]] for i in next_to_last_node_indexes) == 1 for k in self.K), name="(19.2)")
+
+        # Constraint (20.1)
+        self.model.addConstr((gp.quicksum(gp.quicksum(self.x_k_ij[k, i, ds_dasp_index] for i in self.Vl_index
+                                                       if i != ds_dasp_index) for k in self.K) == 1), name="(20.1)")
+
+        # Constraint (20.2)
+        self.model.addConstr((gp.quicksum(gp.quicksum(self.x_k_ij[k, ds_dasp_index, j] for j in self.Vr_index
+                                                      if j != ds_dasp_index) for k in self.K) == 1), name="(20.2)")
 
         self.model.update()
         self.model.write("modello_matheuristic.lp")
