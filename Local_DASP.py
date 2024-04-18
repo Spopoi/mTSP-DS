@@ -16,6 +16,7 @@ class Local_DASP:
         self.V_OS = []
         self.V_OE = []
         self.O = []
+        self.cost_to_start_k = []
         self.V_start = self.get_starter_nodes()
         self.Vn = self.get_ds_customers()
         print("Vn = ", self.Vn)
@@ -81,23 +82,31 @@ class Local_DASP:
         self.x_k_ij_outliers = None
         self.init_model()
 
-    # TODO: check case in which the only node in ds range is depot
     def get_starter_nodes(self):
         starter_nodes = []
         # for each truck tour
         for i in range(len(self.tours)):
             self.local_tours.append([])
+            # print("truck ", i)
+            cost_to_start_i = 0
             # for each node
-            for j in range(1, len(self.tours[i])):
+            # TODO: check again if correct: removed final depot to avoid fake dasp-tours which just end into the depot
+            for j in range(1, len(self.tours[i])-1):
                 node = self.tours[i][j]
-                # TODO: check, is considered also the case in which the only node in range of ds is ds itself
-                if node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
+                # print(f"dal nodo {self.tours[i][j-1].index} a {node.index} dist = {node.node_distance(self.tours[i][j-1])}")
+                ds = self.milp_model.v[self.d_station]
+                if node != ds and node.node_distance(ds) <= self.milp_model.eps / 2:
                     # starter_nodes.append((i, self.tours[i][j - 1]))
                     starter_nodes.append(self.tours[i][j - 1])
                     self.local_tours[i] = self.tours[i][j:]
                     if self.tours[i] not in self.dasp_tours:
                         self.dasp_tours.append(self.tours[i])
+                    self.cost_to_start_k.append(cost_to_start_i)
                     break
+                else:
+                    cost_to_start_i += node.node_distance(self.tours[i][j-1])
+                    print("cost_to_start: ", cost_to_start_i)
+        # print("cost to start k: ", self.cost_to_start_k)
         print("dasp_tours: ", self.dasp_tours)
         return starter_nodes
 
@@ -225,9 +234,18 @@ class Local_DASP:
                                            for k in self.K) == 1 for (os, oe) in self.O_index), name="(22)")
 
         # Constraint (23)
-        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] - self.x_k_ij_outliers[k, os, oe] for i in self.Vl_index) == 0
-                                           for k in self.K for (os, oe) in self.O_index), name="(23)")
+        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] -
+                                           self.x_k_ij_outliers[k, os, oe] for i in self.Vl_index) == 0
+                               for k in self.K for (os, oe) in self.O_index), name="(23)")
+
+        # Constraint (24)
+        self.model.addConstrs(
+            (gp.quicksum(self.x_k_ij[k, i, h] for i in self.Vl_index if i != h) -
+             gp.quicksum(self.x_k_ij[k, h, j] for j in self.Vr_index if j != h) == 0
+             for k in self.K for h in self.Vn_index), name="(24)")
+
+        # Constraint (25)
+        self.model.addConstrs((self.cost_to_start_k[k-1] == self.a_ki[k, k-1] for k in self.K), name="(25)")
 
         self.model.update()
         self.model.write("modello_matheuristic.lp")
-
