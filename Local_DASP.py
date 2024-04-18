@@ -217,6 +217,17 @@ class Local_DASP:
         self.model.addConstr((gp.quicksum(gp.quicksum(self.x_k_ij[k, ds_dasp_index, j] for j in self.Vr_index
                                                       if j != ds_dasp_index) for k in self.K) == 1), name="(20.2)")
 
+        # Constraint (21)
+        self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index if i != oe)
+                                           for k in self.K) == 1 for (os,oe) in self.O_index), name="(21)")
+        # Constraint (22)
+        self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, oe, j] for j in self.Vr_index if j != os)
+                                           for k in self.K) == 1 for (os, oe) in self.O_index), name="(22)")
+
+        # Constraint (23)
+        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] - self.x_k_ij_outliers[k, os, oe] for i in self.Vl_index) == 0
+                                           for k in self.K for (os, oe) in self.O_index), name="(23)")
+
         self.model.update()
         self.model.write("modello_matheuristic.lp")
 
