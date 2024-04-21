@@ -19,7 +19,7 @@ class Local_DASP:
         self.cost_to_start_k = []
         self.V_start = self.get_starter_nodes()
         self.Vn = self.get_ds_customers()
-        print("Vn = ", self.Vn)
+        #print("Vn = ", self.Vn)
         self.V_end = self.get_end_nodes()
         self.get_outlier_nodes()
 
@@ -95,7 +95,8 @@ class Local_DASP:
                 node = self.tours[i][j]
                 # print(f"dal nodo {self.tours[i][j-1].index} a {node.index} dist = {node.node_distance(self.tours[i][j-1])}")
                 ds = self.milp_model.v[self.d_station]
-                if node != ds and node.node_distance(ds) <= self.milp_model.eps / 2:
+                # todo: check if ds could be start node
+                if node.node_distance(ds) <= self.milp_model.eps / 2:
                     # starter_nodes.append((i, self.tours[i][j - 1]))
                     starter_nodes.append(self.tours[i][j - 1])
                     self.local_tours[i] = self.tours[i][j:]
@@ -105,7 +106,6 @@ class Local_DASP:
                     break
                 else:
                     cost_to_start_i += node.node_distance(self.tours[i][j-1])
-                    print("cost_to_start: ", cost_to_start_i)
         # print("cost to start k: ", self.cost_to_start_k)
         print("dasp_tours: ", self.dasp_tours)
         return starter_nodes
@@ -123,17 +123,21 @@ class Local_DASP:
     def get_end_nodes(self):
         end_nodes = []
         for i in range(len(self.tours)):
-            for j in range(len(self.tours[i])-1, -1, -1):
+            for j in range(len(self.tours[i]) - 1, -1, -1):
                 node = self.tours[i][j]
                 if node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
                     if j == len(self.tours[i]) - 1:
-                        end_nodes.append(self.tours[i][j])
+                        prev_node = self.tours[i][j-1]
+                        if prev_node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
+                            end_nodes.append(node)
+                        # node_index = self.local_tours[i].index(node)
                     else:
                         end_nodes.append(self.tours[i][j + 1])
-
-                    node_index = self.local_tours[i].index(node)
-                    self.local_tours[i] = self.local_tours[i][:node_index + 1]
+                        node_index = self.local_tours[i].index(self.tours[i][j + 1])
+                        self.local_tours[i] = self.local_tours[i][:node_index]
+                    print(f"local tours {i}", self.local_tours[i])
                     break
+        print("end_nodes: ", end_nodes)
         return end_nodes
 
     def solve(self):
@@ -151,13 +155,14 @@ class Local_DASP:
                     self.V_OS.append(node)
                     if len(self.local_tours[i]) == 1:
                         oe_node = node
+                        # self.traversal_cost[(node, node)] = 0
                     else:
                         oe_node = self.get_end_outlier(i, j + 1)
                     self.V_OE.append(oe_node)
                     j = self.local_tours[i].index(oe_node) + 1
                     self.O.append((node, oe_node))
                 else:
-                    j += 1  # Se non è un nodo outlier, passa al prossimo
+                    j += 1
 
     def get_end_outlier(self, tour_k, node_index):
         # for each node
@@ -193,7 +198,7 @@ class Local_DASP:
         # CONSTRAINTS
         # Constraint (16)
         end_k = self.k + len(self.Vn) + 2*len(self.O)
-        print("V = ", self.V)
+        # print("V = ", self.V)
         self.model.addConstrs((self.a_ki[k, end_k + k] <= self.tau_tilde for k in self.K), name="(16)")
 
         # Constraint (17)
@@ -247,5 +252,45 @@ class Local_DASP:
         # Constraint (25)
         self.model.addConstrs((self.cost_to_start_k[k-1] == self.a_ki[k, k-1] for k in self.K), name="(25)")
 
+        # Constraint (26)
+        M = 1000
+        self.model.addConstrs((M * (self.x_k_ij_outliers[k, os, oe] - 1) + self.a_ki[k, os] + self.traversal_cost(k-1, os, oe) <= self.a_ki[k, oe]
+                               for k in self.K for (os, oe) in self.O_index), name="(12)")
+
         self.model.update()
         self.model.write("modello_matheuristic.lp")
+
+    def traversal_cost(self, k, os, oe):
+        print(f"entering in traversal_cost with {(k,os,oe)}")
+        if self.V[os] == self.V[oe]:
+            return 0
+        nodes = (self.V[os], self.V[oe])
+        print(f" nodes : {nodes}\n local tour {k} : {self.local_tours[k]}")
+        traversal_cost = 0
+        start = self.local_tours[k].index(nodes[0])
+        end = self.local_tours[k].index(nodes[1])
+        print(f"start_index = {start} e end_index = {end}")
+        for i in range(start, end):
+            node = self.dasp_tours[k][i]
+            print(f"i = {i} node= {node} node2 = {self.dasp_tours[k][i+1]}")
+            traversal_cost += node.node_distance(self.dasp_tours[k][i+1])
+        print("cost ", traversal_cost)
+        return traversal_cost
+
+        # os_index_position = -1
+        # oe_index_position = -1
+        # for (i, node) in enumerate(self.dasp_tours[k]):
+        #     print("(i,node)=",(i,node))
+        #     if node.index == node_indexes[0]:
+        #         os_index_position = i
+        #     elif node.index == node_indexes[1]:
+        #         oe_index_position = i
+        # # os_index_position = self.dasp_tours[k].index(node_indexes[0])
+        # # oe_index_position = self.dasp_tours[k].index(node_indexes[1])
+        # print("os_index_position = ", os_index_position)
+        # print("oe_index_position = ", oe_index_position)
+        # traversal_cost = 0
+        # for i in range(os_index_position, oe_index_position):
+        #     traversal_cost += self.dasp_tours[k][i].node_distance(self.dasp_tours[k][i+1])
+        # print("traversal_cost", traversal_cost)
+        # return traversal_cost
