@@ -3,6 +3,7 @@ import itertools
 from Local_DASP import Local_DASP
 from MTSP_DS_MILP_Solver import MTSP_DS_MILP_Solver
 from MTSP_DS_Solver import MTSP_DS_Solver
+from TourUtils import plotTours
 
 
 class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
@@ -29,7 +30,8 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
         mtsp_solver = MTSP_DS_MILP_Solver(len(nodes), 0, 0, self.Kn,
                                           0, self.alpha, self.eps, nodes=nodes)
         mtsp_solver.solve()
-        mtsp_solver.plotTours()
+        print("mtsp_solution = ", mtsp_solver.getSolution())
+        mtsp_solver.plot_tours()
         tours = mtsp_solver.NodesTour()
         for tour in tours:
             tour.append(self.v[-1])
@@ -37,18 +39,20 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
 
     def solve(self):
         solution_pool = []
-        # print(self.d_station_combos)
+        # print("d-combo", self.d_station_combos)
         for d_station_combo in self.d_station_combos:
             solution = {"tours": [], "assigned_customers": []}
             solution["tours"].extend(self.get_mtsp_tours(d_station_combo))
-
             # solution = self.get_mtsp_tours(d_station_combo)
             for d_station in d_station_combo:
+                print(f"d_station: {d_station}, in d_station_combo: {d_station_combo}")
                 # solution = self.solve_local_dasp(solution, d_station)
                 local_dasp = Local_DASP(self, solution, d_station)
-                solution = local_dasp.solve()
+                # solution = local_dasp.solve()
+                # local_dasp.plot_tours()
+                print(f"Finito dasp con soluzione: {solution}")
             solution_pool.append(solution)
-        # print(solution_pool)
+        print(solution_pool)
 
 
 if __name__ == "__main__":

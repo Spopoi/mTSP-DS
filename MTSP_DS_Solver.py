@@ -2,7 +2,7 @@ import gurobipy as gp
 import numpy as np
 from Node import Node
 from Customer import Customer
-from TourUtils import get_k_value, tourToTuple, _getTrucksTour
+from TourUtils import get_k_value, tourToTuple, _getTrucksTour, plotNodes, getTrucksTour
 from Truck import Truck
 from DroneStation import DroneStation
 from Location import Location
@@ -48,15 +48,15 @@ class MTSP_DS_Solver:
 
         print("v= ", self.v)
         self.t_ij, self.t_ij_drone = self.calculate_distance_matrices()
-        self.plotNodes()
+        # self.plotNodes()
 
     def nodes_init(self, locations):
         # customers:
         for i in self.Vn:
-            self.v.append(Customer(i, locations[i-1]))
+            self.v.append(Customer(i, locations[i - 1]))
         # Drone stations:
         for j in self.Vs:
-            self.v.append(DroneStation(j, locations[j-1], self.Dn))
+            self.v.append(DroneStation(j, locations[j - 1], self.Dn))
 
     def random_init(self):
         # customers:
@@ -89,9 +89,6 @@ class MTSP_DS_Solver:
         else:
             self.model.setParam('OutputFlag', 0)
 
-    def getTrucksTour(self):
-        return _getTrucksTour(self.model, lambda var: var.x == 1)
-
     # def _getTrucksTour(self, decision_checker):
     #     k_var_lists = {}
     #     truck_k_tour = []
@@ -108,7 +105,7 @@ class MTSP_DS_Solver:
 
     def NodesTour(self):
         nodes_tours = []
-        tours = self.getTrucksTour()
+        tours = getTrucksTour(self.model)
         for tour in tours:
             tour_tuples = tourToTuple(tour)
             tour_node = []
@@ -122,61 +119,6 @@ class MTSP_DS_Solver:
 
     def getSolution(self):
         return self.model.ObjVal
-
-    def plotNodes(self, data=None):
-        x_values = [node.location.x for node in self.v]
-        y_values = [node.location.y for node in self.v]
-
-        node_types = ['customer' if isinstance(node, Customer) else 'drone_station' if isinstance(node, DroneStation) else 'depot'
-                      for node in self.v]
-
-        plt.scatter(x_values, y_values, color='black', label="Nodes")
-        plt.xlabel("X")
-        plt.ylabel("Y")
-        plt.title("Nodes plot")
-
-        for node, node_type in zip(self.v[:-1], node_types[:-1]):
-            plt.annotate(str(node.index), (node.location.x, node.location.y), textcoords="offset points",
-                         xytext=(0, 10),
-                         ha='center')
-
-        for node, node_type in zip(self.v, node_types):
-            if node_type == 'customer':
-                plt.plot(node.location.x, node.location.y, 'bo', markersize=8)
-            elif node_type == 'drone_station':
-                plt.plot(node.location.x, node.location.y, 'r*', markersize=10)
-            else:  # depot
-                plt.plot(node.location.x, node.location.y, 'kD', markersize=7)
-
-        blue_patch = plt.Line2D([0], [0], marker='o', color='w', label='Customer', markerfacecolor='blue',
-                                markersize=10)
-        red_patch = plt.Line2D([0], [0], marker='s', color='w', label='Drone Station', markerfacecolor='red',
-                               markersize=10)
-        black_patch = plt.Line2D([0], [0], marker='o', color='w', label='Depot', markerfacecolor='black', markersize=10)
-        plt.legend(handles=[black_patch, red_patch, blue_patch])
-
-        for node, node_type in zip(self.v, node_types):
-            if node_type == 'drone_station':
-                circle = plt.Circle((node.location.x, node.location.y), self.eps/2, color='red', fill=False, linestyle='dashed')
-                plt.gca().add_patch(circle)
-
-        if data:
-            for edge in data:
-                start_node = self.v[edge[0]]
-                end_node = self.v[edge[1]]
-                plt.arrow(start_node.location.x, start_node.location.y,
-                          end_node.location.x - start_node.location.x,
-                          end_node.location.y - start_node.location.y,
-                          head_width=0.2, head_length=0.2, fc='blue', ec='blue')
-
-        plt.show()
-
-    def plotTours(self):
-        tours = self.getTrucksTour()
-        for tour in tours:
-            tuples_tour = tourToTuple(tour)
-            # print(tuples_tour)
-            self.plotNodes(tuples_tour)
 
     def getExecTime(self):
         return self.model.Runtime

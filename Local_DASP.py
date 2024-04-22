@@ -3,7 +3,8 @@ from itertools import chain
 from Node import NodeType
 from gurobipy import gurobipy as gp, GRB
 
-from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTrucksTour_callback
+from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTrucksTour_callback, plotNodes, plotTours, \
+    getTrucksTour
 
 
 class Local_DASP:
@@ -123,10 +124,10 @@ class Local_DASP:
                     Vn.append(node)
         return Vn
 
+    # TODO: sometimes bug
     def get_end_nodes(self):
-        print("TEST: entering get_end_nodes")
         end_nodes = []
-        for i in range(len(self.tours)):
+        for i in range(len(self.dasp_tours)):
             for j in range(len(self.tours[i]) - 1, -1, -1):
                 node = self.tours[i][j]
                 print(f"{(i, j)} iteration, node: {node}")
@@ -135,6 +136,7 @@ class Local_DASP:
                         prev_node = self.tours[i][j - 1]
                         if prev_node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
                             end_nodes.append(node)
+                            print(f"local tours {i}", self.local_tours[i])
                             break
                         # node_index = self.local_tours[i].index(node)
                     else:
@@ -142,6 +144,7 @@ class Local_DASP:
                         end_nodes.append(self.tours[i][j + 1])
                         node_index = self.local_tours[i].index(self.tours[i][j + 1])
                         self.local_tours[i] = self.local_tours[i][:node_index]
+                        print(f"local tours {i}", self.local_tours[i])
                         break
                     print(f"local tours {i}", self.local_tours[i])
                     # break
@@ -155,6 +158,9 @@ class Local_DASP:
         # self.model.optimize(self.subtourelim)
         self.model.optimize()
         print("dasp_solution = ", self.getSolution())
+
+    def plot_tours(self):
+        plotTours(self.model, self.V, self.milp_model.eps)
 
     def getSolution(self):
         return self.model.ObjVal
@@ -291,7 +297,7 @@ class Local_DASP:
         self.model.write("modello_matheuristic.lp")
         self.model._edges = self.x_k_ij
         self.model._vars = self.model.getVars()
-
+        self.model.setParam('OutputFlag', 0)
         self.model.Params.lazyConstraints = 1
 
     def subtourelim(self, model, where):
@@ -315,7 +321,7 @@ class Local_DASP:
 
     # TODO: calculate it one time and not for each constraint iteration
     def traversal_cost(self, os, oe):
-        print(f"entering in traversal_cost with {(os, oe)} \n node = {(self.V[os], self.V[oe])}")
+        # print(f"entering in traversal_cost with {(os, oe)} \n node = {(self.V[os], self.V[oe])}")
         if self.V[os] == self.V[oe]:
             return 0
         outliers = (self.V[os], self.V[oe])
@@ -326,10 +332,10 @@ class Local_DASP:
                 node = tour[j]
                 if node == outliers[0]:
                     traversal_cost += node.node_distance(tour[j + 1])
-                    print("cost: ", traversal_cost)
+                    # print("cost: ", traversal_cost)
                 elif node == outliers[1]:
                     break
-        print("total cost ", traversal_cost)
+        # print("total cost ", traversal_cost)
         return traversal_cost
 
     def cost_after_end_k(self, end_k):
@@ -352,7 +358,7 @@ class Local_DASP:
                 # print(f"node: {node}, next node: {tour[end_node_dasp_tour_index+i+1]}, partial cost: {cost} ")
             # print(f"finale cost {cost}")
             cost_after_end_k.append(cost)
-        print(f"cost_after_end_k: ", cost_after_end_k)
+        # print(f"cost_after_end_k: ", cost_after_end_k)
         return cost_after_end_k
 
 

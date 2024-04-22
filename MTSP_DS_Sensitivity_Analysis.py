@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from MTSP_DS_MILP_Solver import MTSP_DS_MILP_Solver
+from TourUtils import plotTours
 
 
 def compute_average_solution(n, num_trials):
@@ -14,7 +15,7 @@ def compute_average_solution(n, num_trials):
         execTime = solver.getExecTime()
         solver.printExecutionLog()
         execTimes.append(execTime)
-        solver.plotTours()
+        plotTours(solver.getModel(), solver.v, solver.eps)
     average_exec_time = np.mean(execTimes, axis=0)
     return average_exec_time
 
@@ -35,6 +36,6 @@ def plot_results_for_n(values, num_trials=1):
 
 
 if __name__ == "__main__":
-    n_values = [3]
+    n_values = [5]
     plot_results_for_n(n_values)
 

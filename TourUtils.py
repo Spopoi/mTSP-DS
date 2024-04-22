@@ -1,13 +1,15 @@
 import itertools
 import matplotlib.pyplot as plt
 
+from Customer import Customer
+from DroneStation import DroneStation
+
 
 def generate_sub_tours_indexes(v):
     sub_tours_indexes = []
     for sub_tour_length in range(2, len(v)):
         for combo in itertools.combinations(v, sub_tour_length):
             sub_tours_indexes.append(list(combo))
-    print(f" v = {v}, subtour_indexes: {sub_tours_indexes} ")
     return sub_tours_indexes
 
 
@@ -33,6 +35,7 @@ def varToTupleIndex(var):
 def tourToTuple(tour):
     ordered_tuple_tour = []
     tuple_tour = [varToTupleIndex(var) for var in tour]
+    # print("ECCOLO IL TUPLETOUR: ", tuple_tour)
     filtered_tuple = list(filter(lambda x: x[0] == 0, tuple_tour))[0]
     ordered_tuple_tour.append(filtered_tuple)
     tuple_tour.remove(filtered_tuple)  # remove visited tuple to improve efficiency
@@ -41,13 +44,14 @@ def tourToTuple(tour):
         ordered_tuple_tour.append(nextTuple)
         tuple_tour.remove(nextTuple)
         filtered_tuple = nextTuple
+    # print(ordered_tuple_tour)
     return ordered_tuple_tour
 
 
-def _getTrucksTour(model, decision_checker):
+def _getTrucksTour(vars, decision_checker):
     k_var_lists = {}
     truck_k_tour = []
-    for var in model._vars:
+    for var in vars:
         if "x_k_ij" in var.varName:
             k = get_k_value(var.varName)  # Extract k value from variable name
             if k not in k_var_lists:
@@ -60,9 +64,75 @@ def _getTrucksTour(model, decision_checker):
 
 
 def getTrucksTour_callback(model):
-    return _getTrucksTour(model, lambda var: model.cbGetSolution(var) == 1)
+    return _getTrucksTour(model._vars, lambda var: model.cbGetSolution(var) == 1)
+
+
+def getTrucksTour(model):
+    return _getTrucksTour(model._vars, lambda var: var.x == 1)
 
 
 def get_k_value(var_name):
     parts = var_name.split("[")
     return int(parts[1][0])
+
+
+def plotTours(model, v, eps):
+    # print("TESTTTT ENTRO IN PLOT TOURS")
+    # print(model.getVars())
+    tours = getTrucksTour(model)
+    # print("TOURS: ", tours)
+    for tour in tours:
+        tuples_tour = tourToTuple(tour)
+        # print(tuples_tour)
+        plotNodes(v, eps, tuples_tour)
+
+
+def plotNodes(v, eps, data=None):
+    x_values = [node.location.x for node in v]
+    y_values = [node.location.y for node in v]
+
+    node_types = [
+        'customer' if isinstance(node, Customer) else 'drone_station' if isinstance(node, DroneStation) else 'depot'
+        for node in v]
+
+    plt.scatter(x_values, y_values, color='black', label="Nodes")
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.title("Nodes plot")
+
+    for node, node_type in zip(v[:-1], node_types[:-1]):
+        plt.annotate(str(node.index), (node.location.x, node.location.y), textcoords="offset points",
+                     xytext=(0, 10),
+                     ha='center')
+
+    for node, node_type in zip(v, node_types):
+        if node_type == 'customer':
+            plt.plot(node.location.x, node.location.y, 'bo', markersize=8)
+        elif node_type == 'drone_station':
+            plt.plot(node.location.x, node.location.y, 'r*', markersize=10)
+        else:  # depot
+            plt.plot(node.location.x, node.location.y, 'kD', markersize=7)
+
+    blue_patch = plt.Line2D([0], [0], marker='o', color='w', label='Customer', markerfacecolor='blue',
+                            markersize=10)
+    red_patch = plt.Line2D([0], [0], marker='s', color='w', label='Drone Station', markerfacecolor='red',
+                           markersize=10)
+    black_patch = plt.Line2D([0], [0], marker='o', color='w', label='Depot', markerfacecolor='black', markersize=10)
+    plt.legend(handles=[black_patch, red_patch, blue_patch])
+
+    for node, node_type in zip(v, node_types):
+        if node_type == 'drone_station':
+            circle = plt.Circle((node.location.x, node.location.y), eps / 2, color='red', fill=False,
+                                linestyle='dashed')
+            plt.gca().add_patch(circle)
+
+    if data:
+        for edge in data:
+            start_node = v[edge[0]]
+            end_node = v[edge[1]]
+            plt.arrow(start_node.location.x, start_node.location.y,
+                      end_node.location.x - start_node.location.x,
+                      end_node.location.y - start_node.location.y,
+                      head_width=0.2, head_length=0.2, fc='blue', ec='blue')
+
+    plt.show()
