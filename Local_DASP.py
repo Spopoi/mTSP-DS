@@ -50,7 +50,7 @@ class Local_DASP:
         self.V.extend(self.V_end)
 
         self.V_index = range(len(self.V))
-        print("V_indexes: ", self.V_index)
+        print("V_indexes: ", [self.V_index])
         print("V: ", self.V)
 
         self.K = range(1, len(self.dasp_tours) + 1)
@@ -78,6 +78,7 @@ class Local_DASP:
         print("O_index: ", self.O_index)
 
         self.V_end_index = self.V_index[-self.k:]
+        print("V_end_index: ", self.V_end_index)
 
         self.model = None
         self.tau_tilde = None
@@ -88,22 +89,26 @@ class Local_DASP:
         self.init_model()
 
     def get_starter_nodes(self):
+        print("entro in starter nodes")
         starter_nodes = []
+        ds = self.milp_model.v[self.d_station]
         # for each truck tour
         for i in range(len(self.tours)):
-            self.local_tours.append([])
+            # self.local_tours.append([])
             # print("truck ", i)
             cost_to_start_i = 0
-            ds = self.milp_model.v[self.d_station]
             # for each node
             # TODO: check again if correct: removed final depot to avoid fake dasp-tours which just end into the depot
             for j in range(1, len(self.tours[i]) - 1):
                 node = self.tours[i][j]
+                print("node(i,j) ", node)
                 # todo: check if ds could be start node
                 if node.node_distance(ds) <= self.milp_model.eps / 2:
                     # starter_nodes.append((i, self.tours[i][j - 1]))
                     starter_nodes.append(self.tours[i][j - 1])
-                    self.local_tours[i] = self.tours[i][j:]
+                    # self.local_tours[i] = self.tours[i][j:]
+                    self.local_tours.append(self.tours[i][j:])
+                    print("Sono in start node e i local tours sono: ", self.local_tours)
                     if self.tours[i] not in self.dasp_tours:
                         self.dasp_tours.append(self.tours[i])
                     self.cost_to_start_k.append(cost_to_start_i)
@@ -128,12 +133,12 @@ class Local_DASP:
     def get_end_nodes(self):
         end_nodes = []
         for i in range(len(self.dasp_tours)):
-            for j in range(len(self.tours[i]) - 1, -1, -1):
-                node = self.tours[i][j]
+            for j in range(len(self.dasp_tours[i]) - 1, -1, -1):
+                node = self.dasp_tours[i][j]
                 print(f"{(i, j)} iteration, node: {node}")
                 if node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
-                    if j == len(self.tours[i]) - 1:
-                        prev_node = self.tours[i][j - 1]
+                    if j == len(self.dasp_tours[i]) - 1:
+                        prev_node = self.dasp_tours[i][j - 1]
                         if prev_node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
                             end_nodes.append(node)
                             print(f"local tours {i}", self.local_tours[i])
@@ -141,8 +146,8 @@ class Local_DASP:
                         # node_index = self.local_tours[i].index(node)
                     else:
                         print("non è l'ultimo nodo..")
-                        end_nodes.append(self.tours[i][j + 1])
-                        node_index = self.local_tours[i].index(self.tours[i][j + 1])
+                        end_nodes.append(self.dasp_tours[i][j + 1])
+                        node_index = self.local_tours[i].index(self.dasp_tours[i][j + 1])
                         self.local_tours[i] = self.local_tours[i][:node_index]
                         print(f"local tours {i}", self.local_tours[i])
                         break
