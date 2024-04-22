@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 
 def generate_sub_tours_indexes(v):
     sub_tours_indexes = []
-    for sub_tour_length in range(2, len(v) - 1):
-        for combo in itertools.combinations(v[1:-1], sub_tour_length):
+    for sub_tour_length in range(2, len(v)):
+        for combo in itertools.combinations(v, sub_tour_length):
             sub_tours_indexes.append(list(combo))
+    print(f" v = {v}, subtour_indexes: {sub_tours_indexes} ")
     return sub_tours_indexes
 
 
@@ -41,6 +42,25 @@ def tourToTuple(tour):
         tuple_tour.remove(nextTuple)
         filtered_tuple = nextTuple
     return ordered_tuple_tour
+
+
+def _getTrucksTour(model, decision_checker):
+    k_var_lists = {}
+    truck_k_tour = []
+    for var in model._vars:
+        if "x_k_ij" in var.varName:
+            k = get_k_value(var.varName)  # Extract k value from variable name
+            if k not in k_var_lists:
+                k_var_lists[k] = []
+            if decision_checker(var):
+                k_var_lists[k].append(var)
+    for k, var_list in k_var_lists.items():
+        truck_k_tour.append(var_list)
+    return truck_k_tour
+
+
+def getTrucksTour_callback(model):
+    return _getTrucksTour(model, lambda var: model.cbGetSolution(var) == 1)
 
 
 def get_k_value(var_name):

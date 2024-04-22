@@ -3,6 +3,8 @@ from itertools import chain
 from Node import NodeType
 from gurobipy import gurobipy as gp, GRB
 
+from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTrucksTour_callback
+
 
 class Local_DASP:
     def __init__(self, model, solution, d_station):
@@ -20,7 +22,7 @@ class Local_DASP:
         self.V_start = self.get_starter_nodes()
         print("V_start =", self.V_start)
         self.Vn = self.get_ds_customers()
-        #print("Vn = ", self.Vn)
+        # print("Vn = ", self.Vn)
         self.V_end = self.get_end_nodes()
         self.get_outlier_nodes()
 
@@ -58,17 +60,18 @@ class Local_DASP:
 
         vl_index = self.k + len(self.Vn) + 1
         self.Vl_index = self.V_index[:vl_index]
-        self.Vl_index = list(chain(self.Vl_index, self.V_index[vl_index + len(self.V_OS): vl_index + 2 * len(self.V_OS)]))
+        self.Vl_index = list(
+            chain(self.Vl_index, self.V_index[vl_index + len(self.V_OS): vl_index + 2 * len(self.V_OS)]))
         print("Vl_indexes: ", self.Vl_index)
 
         vr_index = vl_index + len(self.V_OS)
         self.Vr_index = self.V_index[self.k: vr_index]
         self.Vr_index = list(
-            chain(self.Vr_index, self.V_index[vr_index+len(self.V_OE):]))
+            chain(self.Vr_index, self.V_index[vr_index + len(self.V_OE):]))
         print("Vr_indexes: ", self.Vr_index)
 
-        self.V_OS_index = self.V_index[vl_index:vl_index+len(self.V_OS)]
-        self.V_OE_index = self.V_index[vr_index:vr_index+len(self.V_OE)]
+        self.V_OS_index = self.V_index[vl_index:vl_index + len(self.V_OS)]
+        self.V_OE_index = self.V_index[vr_index:vr_index + len(self.V_OE)]
 
         self.O_index = list(zip(self.V_OS_index, self.V_OE_index))
         print("O_index: ", self.O_index)
@@ -93,7 +96,7 @@ class Local_DASP:
             ds = self.milp_model.v[self.d_station]
             # for each node
             # TODO: check again if correct: removed final depot to avoid fake dasp-tours which just end into the depot
-            for j in range(1, len(self.tours[i])-1):
+            for j in range(1, len(self.tours[i]) - 1):
                 node = self.tours[i][j]
                 # todo: check if ds could be start node
                 if node.node_distance(ds) <= self.milp_model.eps / 2:
@@ -105,7 +108,7 @@ class Local_DASP:
                     self.cost_to_start_k.append(cost_to_start_i)
                     break
                 else:
-                    cost_to_start_i += node.node_distance(self.tours[i][j-1])
+                    cost_to_start_i += node.node_distance(self.tours[i][j - 1])
         # print("cost to start k: ", self.cost_to_start_k)
         print("dasp_tours: ", self.dasp_tours)
         return starter_nodes
@@ -126,10 +129,10 @@ class Local_DASP:
         for i in range(len(self.tours)):
             for j in range(len(self.tours[i]) - 1, -1, -1):
                 node = self.tours[i][j]
-                print(f"{(i,j)} iteration, node: {node}")
+                print(f"{(i, j)} iteration, node: {node}")
                 if node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
                     if j == len(self.tours[i]) - 1:
-                        prev_node = self.tours[i][j-1]
+                        prev_node = self.tours[i][j - 1]
                         if prev_node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
                             end_nodes.append(node)
                             break
@@ -149,6 +152,12 @@ class Local_DASP:
         print("start", self.V_start)
         print("end", self.V_end)
         print("Outliers= ", self.O)
+        # self.model.optimize(self.subtourelim)
+        self.model.optimize()
+        print("dasp_solution = ", self.getSolution())
+
+    def getSolution(self):
+        return self.model.ObjVal
 
     def get_outlier_nodes(self):
         for i in range(len(self.local_tours)):
@@ -202,7 +211,7 @@ class Local_DASP:
 
         # CONSTRAINTS
         # Constraint (16)
-        end_k = self.k + len(self.Vn) + 2*len(self.O)
+        end_k = self.k + len(self.Vn) + 2 * len(self.O)
         # print("V = ", self.V)
         self.model.addConstrs((self.a_ki[k, end_k + k] <= self.tau_tilde for k in self.K), name="(16)")
 
@@ -220,17 +229,18 @@ class Local_DASP:
         # Constraint (19.1)
         second_step_node_indexes = list(chain(self.Vn_index, [ds_dasp_index], self.V_OS_index, self.V_end_index))
 
-        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, k-1, j] for j in second_step_node_indexes) == 1
+        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, k - 1, j] for j in second_step_node_indexes) == 1
                                for k in self.K), name="(19.1)")
 
         # Constraint (19.2)
         next_to_last_node_indexes = list(chain(self.Vn_index, [ds_dasp_index], self.V_OE_index, self.V_index[:self.k]))
         self.model.addConstrs(
-            (gp.quicksum(self.x_k_ij[k, i, self.V_end_index[k-1]] for i in next_to_last_node_indexes) == 1 for k in self.K), name="(19.2)")
+            (gp.quicksum(self.x_k_ij[k, i, self.V_end_index[k - 1]] for i in next_to_last_node_indexes) == 1 for k in
+             self.K), name="(19.2)")
 
         # Constraint (20.1)
         self.model.addConstr((gp.quicksum(gp.quicksum(self.x_k_ij[k, i, ds_dasp_index] for i in self.Vl_index
-                                                       if i != ds_dasp_index) for k in self.K) == 1), name="(20.1)")
+                                                      if i != ds_dasp_index) for k in self.K) == 1), name="(20.1)")
 
         # Constraint (20.2)
         self.model.addConstr((gp.quicksum(gp.quicksum(self.x_k_ij[k, ds_dasp_index, j] for j in self.Vr_index
@@ -238,7 +248,7 @@ class Local_DASP:
 
         # Constraint (21)
         self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index if i != oe)
-                                           for k in self.K) == 1 for (os,oe) in self.O_index), name="(21)")
+                                           for k in self.K) == 1 for (os, oe) in self.O_index), name="(21)")
         # Constraint (22)
         self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, oe, j] for j in self.Vr_index if j != os)
                                            for k in self.K) == 1 for (os, oe) in self.O_index), name="(22)")
@@ -255,7 +265,7 @@ class Local_DASP:
              for k in self.K for h in self.Vn_index), name="(24)")
 
         # Constraint (25)
-        self.model.addConstrs((self.cost_to_start_k[k-1] == self.a_ki[k, k-1] for k in self.K), name="(25)")
+        self.model.addConstrs((self.cost_to_start_k[k - 1] == self.a_ki[k, k - 1] for k in self.K), name="(25)")
 
         # Constraint (26)
         M = 1000
@@ -272,12 +282,36 @@ class Local_DASP:
 
         cost_after_end_k = self.cost_after_end_k(end_k)
         # Constraint (28)
-        self.model.addConstrs((M * (self.x_k_ij[k, i, end_k + k] - 1) + self.a_ki[k, i] + self.milp_model.t_ij[self.V[i].index, self.V[end_k + k].index]
-                               + cost_after_end_k[k-1] <= self.a_ki[k, end_k + k] for k in self.K
+        self.model.addConstrs((M * (self.x_k_ij[k, i, end_k + k] - 1) + self.a_ki[k, i] + self.milp_model.t_ij[
+            self.V[i].index, self.V[end_k + k].index]
+                               + cost_after_end_k[k - 1] <= self.a_ki[k, end_k + k] for k in self.K
                                for i in self.Vl_index), name="(28)")
 
         self.model.update()
         self.model.write("modello_matheuristic.lp")
+        self.model._edges = self.x_k_ij
+        self.model._vars = self.model.getVars()
+
+        self.model.Params.lazyConstraints = 1
+
+    def subtourelim(self, model, where):
+        if where == GRB.Callback.MIPSOL:
+            print("subtour elim in LOCALDASP")
+            tours = getTrucksTour_callback(model)
+            truck_index = 1
+            x_k_ij = model._edges
+            for truck_tour in tours:
+                node_indexes = getVisitedNodesIndex(truck_tour)
+                # print("node_indexes", node_indexes)
+                sub_tours_indexes = generate_sub_tours_indexes(node_indexes[1:-1])
+                # print("sub_tours_indexes", sub_tours_indexes)
+                # Constraint (13)
+                for S in sub_tours_indexes:
+                    model.cbLazy(
+                        gp.quicksum(gp.quicksum(x_k_ij[truck_index, i, j] for j in S if i != j) for i in S)
+                        <= len(S) - 1)
+                    model.update()
+                truck_index += 1
 
     # TODO: calculate it one time and not for each constraint iteration
     def traversal_cost(self, os, oe):
@@ -291,7 +325,7 @@ class Local_DASP:
             for j in range(len(tour)):
                 node = tour[j]
                 if node == outliers[0]:
-                    traversal_cost += node.node_distance(tour[j+1])
+                    traversal_cost += node.node_distance(tour[j + 1])
                     print("cost: ", traversal_cost)
                 elif node == outliers[1]:
                     break
@@ -306,20 +340,21 @@ class Local_DASP:
             if end_node_k.node_type == NodeType.DEPOT:
                 cost_after_end_k.append(0)
                 continue
-            tour = self.dasp_tours[k-1]
+            tour = self.dasp_tours[k - 1]
             end_node_dasp_tour_index = tour.index(end_node_k)
             # print(f"end_node_dasp_tour_index: ", end_node_dasp_tour_index)
             cost = 0
             # for i in range(len(tour[end_node_dasp_tour_index:])):
             for (i, node) in enumerate(tour[end_node_dasp_tour_index:-1]):
-                #node = tour[i]
+                # node = tour[i]
                 # print("actual node,", node)
-                cost += node.node_distance(tour[end_node_dasp_tour_index+i+1])
+                cost += node.node_distance(tour[end_node_dasp_tour_index + i + 1])
                 # print(f"node: {node}, next node: {tour[end_node_dasp_tour_index+i+1]}, partial cost: {cost} ")
             # print(f"finale cost {cost}")
             cost_after_end_k.append(cost)
-        print(f"cost_after_end_k: ",cost_after_end_k)
+        print(f"cost_after_end_k: ", cost_after_end_k)
         return cost_after_end_k
+
 
     # def cost_after_end_k(self, k, end_k):
     #     end_node_k = self.V[end_k + k]
@@ -338,5 +373,3 @@ class Local_DASP:
     #         print(f"node: {node}, next node: {tour[end_node_dasp_tour_index+i+1]}, partial cost: {cost} ")
     #     print(f"finale cost {cost}")
     #     return cost
-
-

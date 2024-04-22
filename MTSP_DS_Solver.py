@@ -2,7 +2,7 @@ import gurobipy as gp
 import numpy as np
 from Node import Node
 from Customer import Customer
-from TourUtils import get_k_value, tourToTuple
+from TourUtils import get_k_value, tourToTuple, _getTrucksTour
 from Truck import Truck
 from DroneStation import DroneStation
 from Location import Location
@@ -90,21 +90,21 @@ class MTSP_DS_Solver:
             self.model.setParam('OutputFlag', 0)
 
     def getTrucksTour(self):
-        return self._getTrucksTour(lambda var: var.x == 1)
+        return _getTrucksTour(self.model, lambda var: var.x == 1)
 
-    def _getTrucksTour(self, decision_checker):
-        k_var_lists = {}
-        truck_k_tour = []
-        for var in self.model._vars:
-            if "x_k_ij" in var.varName:
-                k = get_k_value(var.varName)  # Extract k value from variable name
-                if k not in k_var_lists:
-                    k_var_lists[k] = []
-                if decision_checker(var):
-                    k_var_lists[k].append(var)
-        for k, var_list in k_var_lists.items():
-            truck_k_tour.append(var_list)
-        return truck_k_tour
+    # def _getTrucksTour(self, decision_checker):
+    #     k_var_lists = {}
+    #     truck_k_tour = []
+    #     for var in self.model._vars:
+    #         if "x_k_ij" in var.varName:
+    #             k = get_k_value(var.varName)  # Extract k value from variable name
+    #             if k not in k_var_lists:
+    #                 k_var_lists[k] = []
+    #             if decision_checker(var):
+    #                 k_var_lists[k].append(var)
+    #     for k, var_list in k_var_lists.items():
+    #         truck_k_tour.append(var_list)
+    #     return truck_k_tour
 
     def NodesTour(self):
         nodes_tours = []
@@ -171,7 +171,6 @@ class MTSP_DS_Solver:
 
         plt.show()
 
-    # TODO: update plot to better a visualization
     def plotTours(self):
         tours = self.getTrucksTour()
         for tour in tours:

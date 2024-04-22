@@ -5,7 +5,7 @@ import numpy as np
 from gurobipy import GRB
 
 from MTSP_DS_Solver import MTSP_DS_Solver
-from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes
+from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, _getTrucksTour, getTrucksTour_callback
 
 
 class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
@@ -117,17 +117,15 @@ class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
         self.showOptimisationLog(False)
         self.model.Params.lazyConstraints = 1
 
-    def getTrucksTour_callback(self):
-        return self._getTrucksTour(lambda var: self.model.cbGetSolution(var) == 1)
-
     def subtourelim(self, model, where):
         if where == GRB.Callback.MIPSOL:
-            tours = self.getTrucksTour_callback()
+            tours = getTrucksTour_callback(model)
             truck_index = 1
             x_k_ij = model._edges
             for truck_tour in tours:
                 node_indexes = getVisitedNodesIndex(truck_tour)
-                sub_tours_indexes = generate_sub_tours_indexes(node_indexes)
+                print("node_indexes: ", node_indexes)
+                sub_tours_indexes = generate_sub_tours_indexes(node_indexes[1:-1])
                 # Constraint (13)
                 for S in sub_tours_indexes:
                     model.cbLazy(
