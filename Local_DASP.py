@@ -13,18 +13,21 @@ class Local_DASP:
         self.tours = solution["tours"]
         self.dasp_tours = []
         self.assigned_customers = solution["assigned_customers"]
+        self.dasp_solution = {"tours": [], "assigned_customers": self.assigned_customers}
         self.d_station = d_station
-        # TODO: check local_tours, may not be present ds in the local tour
         self.local_tours = []
         self.V_OS = []
         self.V_OE = []
         self.O = []
         self.cost_to_start_k = []
+        self.pre_dasp_tours = []
+        self.post_dasp_tours = []
         self.V_start = self.get_starter_nodes()
         print("V_start =", self.V_start)
         self.Vn = self.get_ds_customers()
         # print("Vn = ", self.Vn)
         self.V_end = self.get_end_nodes()
+        print("V_end =", self.V_end)
         self.get_outlier_nodes()
 
         self.Vl = []
@@ -50,14 +53,14 @@ class Local_DASP:
         self.V.extend(self.V_end)
 
         self.V_index = range(len(self.V))
-        print("V_indexes: ", [self.V_index])
+        print("V_indexes: ", [i for i in self.V_index])
         print("V: ", self.V)
 
         self.K = range(1, len(self.dasp_tours) + 1)
         self.k = len(self.dasp_tours)
 
         self.Vn_index = self.V_index[self.k: self.k + len(self.Vn)]
-        print("Vn_index = ", self.Vn_index)
+        print("Vn_index = ", [i for i in self.Vn_index])
 
         vl_index = self.k + len(self.Vn) + 1
         self.Vl_index = self.V_index[:vl_index]
@@ -104,6 +107,11 @@ class Local_DASP:
                 if node.node_distance(ds) <= self.milp_model.eps / 2:
                     starter_nodes.append(self.tours[i][j - 1])
                     self.local_tours.append(self.tours[i][j:])
+                    if j-1 >= 0:
+                        self.pre_dasp_tours.append(self.tours[i][:j-1])
+                    else:
+                        self.pre_dasp_tours.append([])
+                    print(f"local_tours : {self.local_tours}, pre_dasp_tours: {self.pre_dasp_tours}")
                     # print("Sono in start node e i local tours sono: ", self.local_tours)
                     if self.tours[i] not in self.dasp_tours:
                         self.dasp_tours.append(self.tours[i])
@@ -111,7 +119,11 @@ class Local_DASP:
                     break
                 else:
                     cost_to_start_i += node.node_distance(self.tours[i][j - 1])
-        print("dasp_tours: ", self.dasp_tours)
+            if self.tours[i] not in self.dasp_tours:
+                self.dasp_solution["tours"].append(self.tours[i])
+
+        print(f"dasp_tours: {self.dasp_tours}")
+        print(f"solution: ", self.dasp_solution["tours"])
         return starter_nodes
 
     def get_ds_customers(self):
@@ -129,46 +141,54 @@ class Local_DASP:
         for i in range(len(self.dasp_tours)):
             for j in range(len(self.dasp_tours[i]) - 1, -1, -1):
                 node = self.dasp_tours[i][j]
-                print(f"{(i, j)} iteration, node: {node}")
+                # print(f"{(i, j)} iteration, node: {node}")
                 if node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
                     if j == len(self.dasp_tours[i]) - 1:
                         prev_node = self.dasp_tours[i][j - 1]
                         if prev_node.node_distance(self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2:
                             end_nodes.append(node)
-                            print(f"local tours {i}", self.local_tours[i])
+                            self.post_dasp_tours.append([])
+                            # print(f"local tours {i}", self.local_tours[i])
                             break
                     else:
                         # print("non è l'ultimo nodo..")
                         end_nodes.append(self.dasp_tours[i][j + 1])
+                        self.post_dasp_tours.append(self.dasp_tours[i][j + 2:])
                         node_index = self.local_tours[i].index(self.dasp_tours[i][j + 1])
                         self.local_tours[i] = self.local_tours[i][:node_index]
-                        print(f"local tours {i}", self.local_tours[i])
+                        # print(f"local tours {i}", self.local_tours[i])
                         break
-                    print(f"local tours {i}", self.local_tours[i])
+                    # print(f"local tours {i}", self.local_tours[i])
                     # break
-        print("end_nodes: ", end_nodes)
+        # print("end_nodes: ", end_nodes)
+        print("self.post_dasp_tours: ", self.post_dasp_tours)
         return end_nodes
 
     def solve(self):
-        print("start", self.V_start)
-        print("end", self.V_end)
-        print("Outliers= ", self.O)
+        # print("start", self.V_start)
+        # print("end", self.V_end)
+        # print("Outliers= ", self.O)
         # self.model.optimize(self.subtourelim)
         self.model.optimize()
         print("dasp_solution = ", self.getSolution())
         # tuple_tours = getTupleTour(self.model)
         assigned_customers = self.get_assigned_customers()
-        solution = {"tours": [], "assigned_customers": []}
+
         tours = getTrucksTour(self.model)
-        solution[tours].extend(tours)
-        solution[assigned_customers].extend(assigned_customers)
-        print("Finito dasp, ecco la sol", solution)
-        return solution
+        final_dasp_tours = []
+        for tour in tours:
+            final_dasp_tours.append(self.pre_dasp_tours + tour + self.post_dasp_tours)
+        print("dasp_modified_tours", final_dasp_tours)
+        self.dasp_solution["tours"].append(final_dasp_tours)
+        self.dasp_solution["assigned_customers"].extend(assigned_customers)
+        print("Finito dasp, ecco la sol", self.dasp_solution)
+        return self.dasp_solution
 
     def tourToTuple(self, tour):
         ordered_tuple_tour = []
         tuple_tour = [varToTupleIndex(var) for var in tour]
-        tuple_tour_node_indexes = [self.V[edge[0]].index for edge in tuple_tour]
+        print("le tuple sono: ", tuple_tour)
+        tuple_tour_node_indexes = [(self.V[edge[0]].index, self.V[edge[1]].index) for edge in tuple_tour]
         print("ECCOLO IL TUPLETOUR in localDasp: ", tuple_tour_node_indexes)
         filtered_tuple = list(filter(lambda x: x[0] == 0, tuple_tour_node_indexes))[0]
         ordered_tuple_tour.append(filtered_tuple)
@@ -181,10 +201,11 @@ class Local_DASP:
         return ordered_tuple_tour
 
     def getTupleTour(self):
+        print("entro in getTupleTour")
         tours = getTrucksTour(self.model)
         tuple_tours = []
         for tour in tours:
-            print(tourToTuple(tour))
+            print(f"Sto per prendere le tuple di {tour}")
             tuples_tour = self.tourToTuple(tour)
             print("tuple_tour: ", tuples_tour)
             tuple_tours.append(tuples_tour)
@@ -201,6 +222,7 @@ class Local_DASP:
             plotNodes(self.V, self.milp_model.eps, tour, drone_deliveries_from_s)
 
     def get_assigned_customers(self):
+        print("entro in get_assigned_customers")
         tuple_tours = self.getTupleTour()
         assigned_customers = []
         for tour in tuple_tours:

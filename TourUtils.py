@@ -42,7 +42,7 @@ def varToCustomerDroneIndex(var):
 def tourToTuple(tour):
     ordered_tuple_tour = []
     tuple_tour = [varToTupleIndex(var) for var in tour]
-    print("ECCOLO IL TUPLETOUR: ", tuple_tour)
+    # print("ECCOLO IL TUPLETOUR: ", tuple_tour)
     filtered_tuple = list(filter(lambda x: x[0] == 0, tuple_tour))[0]
     ordered_tuple_tour.append(filtered_tuple)
     tuple_tour.remove(filtered_tuple)

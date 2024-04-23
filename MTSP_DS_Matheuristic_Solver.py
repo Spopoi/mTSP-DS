@@ -48,7 +48,7 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
                 # solution = self.solve_local_dasp(solution, d_station)
                 local_dasp = Local_DASP(self, solution, d_station)
                 solution = local_dasp.solve()
-                local_dasp.plotTours()
+                #local_dasp.plotTours()
                 print(f"Finito dasp con soluzione: {solution}")
             solution_pool.append(solution)
         print(solution_pool)
