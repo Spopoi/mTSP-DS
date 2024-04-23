@@ -4,7 +4,7 @@ from Node import NodeType
 from gurobipy import gurobipy as gp, GRB
 
 from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTrucksTour_callback, plotNodes, plotTours, \
-    getTrucksTour, getTupleTour, varToCustomerDroneIndex
+    getTrucksTour, getTupleTour, varToCustomerDroneIndex, varToTupleIndex, get_customer_drone_edges, tourToTuple
 
 
 class Local_DASP:
@@ -165,8 +165,43 @@ class Local_DASP:
         print("Finito dasp, ecco la sol", solution)
         return solution
 
+    def tourToTuple(self, tour):
+        ordered_tuple_tour = []
+        tuple_tour = [varToTupleIndex(var) for var in tour]
+        tuple_tour_node_indexes = [self.V[edge[0]].index for edge in tuple_tour]
+        print("ECCOLO IL TUPLETOUR in localDasp: ", tuple_tour_node_indexes)
+        filtered_tuple = list(filter(lambda x: x[0] == 0, tuple_tour_node_indexes))[0]
+        ordered_tuple_tour.append(filtered_tuple)
+        tuple_tour_node_indexes.remove(filtered_tuple)
+        for i in range(len(tuple_tour)):
+            nextTuple = list(filter(lambda x: x[0] == filtered_tuple[1], tuple_tour_node_indexes))[0]
+            ordered_tuple_tour.append(nextTuple)
+            tuple_tour_node_indexes.remove(nextTuple)
+            filtered_tuple = nextTuple
+        return ordered_tuple_tour
+
+    def getTupleTour(self):
+        tours = getTrucksTour(self.model)
+        tuple_tours = []
+        for tour in tours:
+            print(tourToTuple(tour))
+            tuples_tour = self.tourToTuple(tour)
+            print("tuple_tour: ", tuples_tour)
+            tuple_tours.append(tuples_tour)
+        return tuple_tours
+
+    def plotTours(self):
+        tuple_tours = self.getTupleTour()
+        drone_deliveries = get_customer_drone_edges(self.model)
+        drone_deliveries_from_s = None
+        for tour in tuple_tours:
+            for i, _ in tour:
+                if self.V[i].node_type == NodeType.DRONE_STATION:
+                    drone_deliveries_from_s = list(filter(lambda x: x[0] == i, drone_deliveries))
+            plotNodes(self.V, self.milp_model.eps, tour, drone_deliveries_from_s)
+
     def get_assigned_customers(self):
-        tuple_tours = getTupleTour(self.model)
+        tuple_tours = self.getTupleTour()
         assigned_customers = []
         for tour in tuple_tours:
             for tour_tuple in tour:
@@ -185,9 +220,6 @@ class Local_DASP:
                     customer = varToCustomerDroneIndex(decision_variable)
                     customers_assigned_to_ds.append(customer)
         return customers_assigned_to_ds
-
-    def plot_tours(self):
-        plotTours(self.model, self.V, self.milp_model.eps)
 
     def getSolution(self):
         return self.model.ObjVal
