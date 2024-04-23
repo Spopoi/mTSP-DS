@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 
 from Customer import Customer
 from DroneStation import DroneStation
+from Node import NodeType
 
 
 def generate_sub_tours_indexes(v):
@@ -32,10 +33,19 @@ def varToTupleIndex(var):
     return starting_node, ending_node
 
 
+def varToCustomerDroneIndex(var):
+    parts = var.varName.split(",")
+    print("parts: ", parts)
+    starting_node = int(parts[1][0])
+    # ending_node = int(parts[2][:-1])
+    return starting_node
+
+
 def tourToTuple(tour):
+    print("TEST TOURTOTOUPLE, tour: ", tour)
     ordered_tuple_tour = []
     tuple_tour = [varToTupleIndex(var) for var in tour]
-    # print("ECCOLO IL TUPLETOUR: ", tuple_tour)
+    print("ECCOLO IL TUPLETOUR: ", tuple_tour)
     filtered_tuple = list(filter(lambda x: x[0] == 0, tuple_tour))[0]
     ordered_tuple_tour.append(filtered_tuple)
     tuple_tour.remove(filtered_tuple)  # remove visited tuple to improve efficiency
@@ -46,6 +56,15 @@ def tourToTuple(tour):
         filtered_tuple = nextTuple
     # print(ordered_tuple_tour)
     return ordered_tuple_tour
+
+
+def get_customer_drone_edges(model):
+    drone_to_customers_edges = []
+    for var in model._vars:
+        if "y_d_sj" in var.varName:
+            if var.x == 1:
+                drone_to_customers_edges.append(varToTupleIndex(var))
+    return drone_to_customers_edges
 
 
 def _getTrucksTour(vars, decision_checker):
@@ -76,18 +95,28 @@ def get_k_value(var_name):
     return int(parts[1][0])
 
 
-def plotTours(model, v, eps):
-    # print("TESTTTT ENTRO IN PLOT TOURS")
-    # print(model.getVars())
+def getTupleTour(model):
     tours = getTrucksTour(model)
+    tuple_tours = []
     # print("TOURS: ", tours)
     for tour in tours:
         tuples_tour = tourToTuple(tour)
-        # print(tuples_tour)
-        plotNodes(v, eps, tuples_tour)
+        tuple_tours.append(tuples_tour)
+    return tuple_tours
 
 
-def plotNodes(v, eps, data=None):
+def plotTours(model, v, eps):
+    tuple_tours = getTupleTour(model)
+    drone_deliveries = get_customer_drone_edges(model)
+    drone_deliveries_from_s = None
+    for tour in tuple_tours:
+        for i, _ in tour:
+            if v[i].node_type == NodeType.DRONE_STATION:
+                drone_deliveries_from_s = list(filter(lambda x: x[0] == i, drone_deliveries))
+        plotNodes(v, eps, tour, drone_deliveries_from_s)
+
+
+def plotNodes(v, eps, tour_tuples=None, drone_deliveries=None):
     x_values = [node.location.x for node in v]
     y_values = [node.location.y for node in v]
 
@@ -126,13 +155,20 @@ def plotNodes(v, eps, data=None):
                                 linestyle='dashed')
             plt.gca().add_patch(circle)
 
-    if data:
-        for edge in data:
+    if tour_tuples:
+        for edge in tour_tuples:
             start_node = v[edge[0]]
             end_node = v[edge[1]]
             plt.arrow(start_node.location.x, start_node.location.y,
                       end_node.location.x - start_node.location.x,
                       end_node.location.y - start_node.location.y,
                       head_width=0.2, head_length=0.2, fc='blue', ec='blue')
-
+    if drone_deliveries:
+        for edge in drone_deliveries:
+            start_node = v[edge[0]]
+            end_node = v[edge[1]]
+            plt.arrow(start_node.location.x, start_node.location.y,
+                      end_node.location.x - start_node.location.x,
+                      end_node.location.y - start_node.location.y,
+                      head_width=0.2, head_length=0.2, fc='green', ec='green')
     plt.show()

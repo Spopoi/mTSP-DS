@@ -3,7 +3,6 @@ import itertools
 from Local_DASP import Local_DASP
 from MTSP_DS_MILP_Solver import MTSP_DS_MILP_Solver
 from MTSP_DS_Solver import MTSP_DS_Solver
-from TourUtils import plotTours
 
 
 class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
@@ -48,8 +47,8 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
                 print(f"d_station: {d_station}, in d_station_combo: {d_station_combo}")
                 # solution = self.solve_local_dasp(solution, d_station)
                 local_dasp = Local_DASP(self, solution, d_station)
-                # solution = local_dasp.solve()
-                # local_dasp.plot_tours()
+                solution = local_dasp.solve()
+                local_dasp.plot_tours()
                 print(f"Finito dasp con soluzione: {solution}")
             solution_pool.append(solution)
         print(solution_pool)
