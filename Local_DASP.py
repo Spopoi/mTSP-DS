@@ -162,6 +162,7 @@ class Local_DASP:
         tours = getTrucksTour(self.model)
         solution[tours].extend(tours)
         solution[assigned_customers].extend(assigned_customers)
+        print("Finito dasp, ecco la sol", solution)
         return solution
 
     def get_assigned_customers(self):

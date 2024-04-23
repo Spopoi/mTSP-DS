@@ -35,7 +35,6 @@ def varToTupleIndex(var):
 
 def varToCustomerDroneIndex(var):
     parts = var.varName.split(",")
-    print("parts: ", parts)
     drone_index = int(parts[1][0])
     return drone_index
 
@@ -69,7 +68,7 @@ def _getTrucksTour(vars, decision_checker):
     truck_k_tour = []
     for var in vars:
         if "x_k_ij" in var.varName:
-            k = get_k_value(var.varName)  # Extract k value from variable name
+            k = get_k_value(var.varName)
             if k not in k_var_lists:
                 k_var_lists[k] = []
             if decision_checker(var):
@@ -95,7 +94,6 @@ def get_k_value(var_name):
 def getTupleTour(model):
     tours = getTrucksTour(model)
     tuple_tours = []
-    # print("TOURS: ", tours)
     for tour in tours:
         tuples_tour = tourToTuple(tour)
         tuple_tours.append(tuples_tour)
