@@ -36,25 +36,22 @@ def varToTupleIndex(var):
 def varToCustomerDroneIndex(var):
     parts = var.varName.split(",")
     print("parts: ", parts)
-    starting_node = int(parts[1][0])
-    # ending_node = int(parts[2][:-1])
-    return starting_node
+    drone_index = int(parts[1][0])
+    return drone_index
 
 
 def tourToTuple(tour):
-    print("TEST TOURTOTOUPLE, tour: ", tour)
     ordered_tuple_tour = []
     tuple_tour = [varToTupleIndex(var) for var in tour]
     print("ECCOLO IL TUPLETOUR: ", tuple_tour)
     filtered_tuple = list(filter(lambda x: x[0] == 0, tuple_tour))[0]
     ordered_tuple_tour.append(filtered_tuple)
-    tuple_tour.remove(filtered_tuple)  # remove visited tuple to improve efficiency
+    tuple_tour.remove(filtered_tuple)
     for i in range(len(tuple_tour)):
         nextTuple = list(filter(lambda x: x[0] == filtered_tuple[1], tuple_tour))[0]
         ordered_tuple_tour.append(nextTuple)
         tuple_tour.remove(nextTuple)
         filtered_tuple = nextTuple
-    # print(ordered_tuple_tour)
     return ordered_tuple_tour
 
 
@@ -147,7 +144,12 @@ def plotNodes(v, eps, tour_tuples=None, drone_deliveries=None):
     red_patch = plt.Line2D([0], [0], marker='s', color='w', label='Drone Station', markerfacecolor='red',
                            markersize=10)
     black_patch = plt.Line2D([0], [0], marker='o', color='w', label='Depot', markerfacecolor='black', markersize=10)
-    plt.legend(handles=[black_patch, red_patch, blue_patch])
+    green_patch = plt.Line2D([0], [0], marker='_', color='g', label='Drone delivery', markerfacecolor='green',
+                             markersize=10)
+    tour_patch = plt.Line2D([0], [0], marker='_', color='black', label='Truck tour', markerfacecolor='black',
+                            markersize=10)
+
+    plt.legend(handles=[black_patch, red_patch, blue_patch, green_patch, tour_patch])
 
     for node, node_type in zip(v, node_types):
         if node_type == 'drone_station':
@@ -162,7 +164,7 @@ def plotNodes(v, eps, tour_tuples=None, drone_deliveries=None):
             plt.arrow(start_node.location.x, start_node.location.y,
                       end_node.location.x - start_node.location.x,
                       end_node.location.y - start_node.location.y,
-                      head_width=0.2, head_length=0.2, fc='blue', ec='blue')
+                      head_width=0.2, head_length=0.2, fc='black', ec='black')
     if drone_deliveries:
         for edge in drone_deliveries:
             start_node = v[edge[0]]

@@ -38,7 +38,6 @@ class MTSP_DS_Solver:
 
         if nodes is not None:
             self.v.extend([node for node in nodes])
-            # TODO: maybe remove custom_locations
         elif custom_locations is not None:
             self.nodes_init(custom_locations)
         else:
@@ -89,20 +88,6 @@ class MTSP_DS_Solver:
         else:
             self.model.setParam('OutputFlag', 0)
 
-    # def _getTrucksTour(self, decision_checker):
-    #     k_var_lists = {}
-    #     truck_k_tour = []
-    #     for var in self.model._vars:
-    #         if "x_k_ij" in var.varName:
-    #             k = get_k_value(var.varName)  # Extract k value from variable name
-    #             if k not in k_var_lists:
-    #                 k_var_lists[k] = []
-    #             if decision_checker(var):
-    #                 k_var_lists[k].append(var)
-    #     for k, var_list in k_var_lists.items():
-    #         truck_k_tour.append(var_list)
-    #     return truck_k_tour
-
     def NodesTour(self):
         nodes_tours = []
         tours = getTrucksTour(self.model)
@@ -110,11 +95,8 @@ class MTSP_DS_Solver:
             tour_tuples = tourToTuple(tour)
             tour_node = []
             for tour_tuple in tour_tuples:
-                # node_i = Node.node_index_map[tour_tuple[0]]
-                # tour_node.append(node_i)
                 tour_node.append(self.v[tour_tuple[0]])
             nodes_tours.append(tour_node)
-        # print(nodes_tours)
         return nodes_tours
 
     def getSolution(self):

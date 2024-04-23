@@ -5,8 +5,7 @@ import numpy as np
 from gurobipy import GRB
 
 from MTSP_DS_Solver import MTSP_DS_Solver
-from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, _getTrucksTour, getTrucksTour_callback, \
-    plotTours
+from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTrucksTour_callback, plotTours
 
 
 class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
@@ -35,7 +34,6 @@ class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
         plotTours(self.model, self.v, self.eps)
 
     def initModel(self):
-        # TODO: maybe duplication
         self.model = gp.Model("mTSP-DS")
 
         # DECISION VARIABLES
@@ -129,7 +127,6 @@ class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
             x_k_ij = model._edges
             for truck_tour in tours:
                 node_indexes = getVisitedNodesIndex(truck_tour)
-                # print("node_indexes: ", node_indexes)
                 sub_tours_indexes = generate_sub_tours_indexes(node_indexes[1:-1])
                 # Constraint (13)
                 for S in sub_tours_indexes:
