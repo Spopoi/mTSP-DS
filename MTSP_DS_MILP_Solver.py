@@ -27,6 +27,12 @@ class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
         self.model = None
         self.initModel()
 
+    def get_nodes_location(self):
+        loc = []
+        for node in self.v:
+            loc.append(node.location)
+        return loc
+
     def getModel(self):
         return self.model
 
