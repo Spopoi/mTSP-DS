@@ -12,6 +12,7 @@ def compute_average_solution(n, num_trials):
         solver = MTSP_DS_MILP_Solver(6, 1, 2, 2)
 
         solver.solve()
+        solver.save_nodes_location_to_file("test_locations")
         execTime = solver.getExecTime()
         solver.printExecutionLog()
         execTimes.append(execTime)

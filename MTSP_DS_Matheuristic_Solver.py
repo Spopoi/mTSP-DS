@@ -1,5 +1,6 @@
 import itertools
 
+import Location
 from Local_DASP import Local_DASP
 from MTSP_DS_MILP_Solver import MTSP_DS_MILP_Solver
 from MTSP_DS_Solver import MTSP_DS_Solver
@@ -10,6 +11,7 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
     def __init__(self, n, m, Dn=2, Kn=1, C=None, alpha=1.2, eps=100, nodes=None, custom_locations=None):
         super().__init__(n, m, Dn, Kn, C, alpha, eps, nodes, custom_locations)
         self.d_station_combos = self.get_all_d_station_combos()
+        self.save_nodes_location_to_file("test_locations")
 
     def get_all_d_station_combos(self):
         return list(itertools.combinations(self.Vs, self.C))
@@ -48,12 +50,14 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
                 # solution = self.solve_local_dasp(solution, d_station)
                 local_dasp = Local_DASP(self, solution, d_station)
                 solution = local_dasp.solve()
-                #local_dasp.plotTours()
+                # local_dasp.plotTours()
                 print(f"Finito dasp con soluzione: {solution}")
             solution_pool.append(solution)
         print(solution_pool)
 
 
 if __name__ == "__main__":
-    solver = MTSP_DS_Matheuristic_Solver(9, 1, 2, 2, 1, eps=150)
+    locs = Location.create_custom_location_list("test_locations")
+    print(locs)
+    solver = MTSP_DS_Matheuristic_Solver(9, 1, 2, 2, 1, eps=150, custom_locations=locs)
     solver.solve()

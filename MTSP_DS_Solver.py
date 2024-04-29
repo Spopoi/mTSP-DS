@@ -5,13 +5,12 @@ from Customer import Customer
 from TourUtils import get_k_value, tourToTuple, _getTrucksTour, plotNodes, getTrucksTour
 from Truck import Truck
 from DroneStation import DroneStation
-from Location import Location
+from Location import Location, rand_location
 from Depot import Depot
 import matplotlib.pyplot as plt
 
 
 class MTSP_DS_Solver:
-    maxLocationBound = 150
 
     def __init__(self, n, m, Dn=2, Kn=1, C=None, alpha=1.2, eps=100, nodes=None, custom_locations=None):
         self.n = n  # customers
@@ -60,16 +59,18 @@ class MTSP_DS_Solver:
     def random_init(self):
         # customers:
         for i in self.Vn:
-            self.v.append(Customer(i, self.rand_location()))
+            self.v.append(Customer(i, rand_location()))
         # Drone stations:
         for j in self.Vs:
-            self.v.append(DroneStation(j, self.rand_location(), self.Dn))
+            self.v.append(DroneStation(j, rand_location(), self.Dn))
         # self.plotNodes()
 
-    def rand_location(self):
-        rand_x = np.random.randint(1, self.maxLocationBound)
-        rand_y = np.random.randint(1, self.maxLocationBound)
-        return Location(rand_x, rand_y)
+    def save_nodes_location_to_file(self, filepath: str):
+        with open(filepath, 'a') as file:
+            for node in self.v[1:]:
+                location = node.location
+                file.write(f"{location} ")
+            file.write("\n")
 
     def calculate_distance_matrices(self):
         num_nodes = len(self.v)
