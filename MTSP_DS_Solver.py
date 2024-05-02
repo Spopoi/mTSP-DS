@@ -89,6 +89,12 @@ class MTSP_DS_Solver:
         else:
             self.model.setParam('OutputFlag', 0)
 
+    def get_nodes_location(self):
+        loc = []
+        for node in self.v:
+            loc.append(node.location)
+        return loc
+
     def NodesTour(self):
         nodes_tours = []
         tours = getTrucksTour(self.model)
@@ -99,6 +105,9 @@ class MTSP_DS_Solver:
                 tour_node.append(self.v[tour_tuple[0]])
             nodes_tours.append(tour_node)
         return nodes_tours
+
+    def getModel(self):
+        return self.model
 
     def getSolution(self):
         return self.model.ObjVal

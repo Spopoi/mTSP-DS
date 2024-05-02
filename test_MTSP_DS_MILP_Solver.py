@@ -7,8 +7,8 @@ from MTSP_DS_MILP_Solver import MTSP_DS_MILP_Solver
 class TestMTSP_DS_MILP_Solver(TestCase):
 
     @classmethod
-    def setUpClass(self):
-        self.model = MTSP_DS_MILP_Solver(6, 1, 2, 2)
+    def setUpClass(cls):
+        cls.model = MTSP_DS_MILP_Solver(6, 1, 2, 2)
 
     # def setUp(self):
     #     self.model = MTSP_DS_MILP_Solver(6, 1, 2, 2)

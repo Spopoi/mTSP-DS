@@ -3,8 +3,8 @@ from itertools import chain
 from Node import NodeType
 from gurobipy import gurobipy as gp, GRB
 
-from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTrucksTour_callback, plotNodes, plotTours, \
-    getTrucksTour, getTupleTour, varToCustomerDroneIndex, varToTupleIndex, get_customer_drone_edges, tourToTuple
+from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTrucksTour_callback, plotNodes, \
+    getTrucksTour, varToCustomerDroneIndex, varToTupleIndex, get_customer_drone_edges
 
 
 class Local_DASP:
@@ -119,6 +119,7 @@ class Local_DASP:
                     break
                 else:
                     cost_to_start_i += node.node_distance(self.tours[i][j - 1])
+                    print("cost_to_start: ", cost_to_start_i)
             if self.tours[i] not in self.dasp_tours:
                 self.dasp_solution["tours"].append(self.tours[i])
 
@@ -171,6 +172,7 @@ class Local_DASP:
         # self.model.optimize(self.subtourelim)
         self.model.optimize()
         print("dasp_solution = ", self.getSolution())
+        print("drone assignment = ", get_customer_drone_edges(self.model))
         # tuple_tours = getTupleTour(self.model)
         assigned_customers = self.get_assigned_customers()
 
@@ -184,13 +186,14 @@ class Local_DASP:
         print("Finito dasp, ecco la sol", self.dasp_solution)
         return self.dasp_solution
 
-    def tourToTuple(self, tour):
+    def tourToTuple(self, tour, k):
         ordered_tuple_tour = []
         tuple_tour = [varToTupleIndex(var) for var in tour]
         print("le tuple sono: ", tuple_tour)
         tuple_tour_node_indexes = [(self.V[edge[0]].index, self.V[edge[1]].index) for edge in tuple_tour]
         print("ECCOLO IL TUPLETOUR in localDasp: ", tuple_tour_node_indexes)
-        filtered_tuple = list(filter(lambda x: x[0] == 0, tuple_tour_node_indexes))[0]
+        filtered_tuple = list(filter(lambda x: x[0] == self.V_start[k].index, tuple_tour_node_indexes))[0]
+        print("la prima tappa è: ", filtered_tuple)
         ordered_tuple_tour.append(filtered_tuple)
         tuple_tour_node_indexes.remove(filtered_tuple)
         for i in range(len(tuple_tour)):
@@ -201,25 +204,25 @@ class Local_DASP:
         return ordered_tuple_tour
 
     def getTupleTour(self):
-        print("entro in getTupleTour")
         tours = getTrucksTour(self.model)
         tuple_tours = []
-        for tour in tours:
-            print(f"Sto per prendere le tuple di {tour}")
-            tuples_tour = self.tourToTuple(tour)
+        print("entro in getTupleTour e i tour aggiornati sono: ", tours)
+        for (i, tour) in enumerate(tours):
+            print(f"Sto per prendere le tuple di {tour} del camion {i}")
+            tuples_tour = self.tourToTuple(tour, i)
             print("tuple_tour: ", tuples_tour)
             tuple_tours.append(tuples_tour)
         return tuple_tours
 
-    def plotTours(self):
-        tuple_tours = self.getTupleTour()
-        drone_deliveries = get_customer_drone_edges(self.model)
-        drone_deliveries_from_s = None
-        for tour in tuple_tours:
-            for i, _ in tour:
-                if self.V[i].node_type == NodeType.DRONE_STATION:
-                    drone_deliveries_from_s = list(filter(lambda x: x[0] == i, drone_deliveries))
-            plotNodes(self.V, self.milp_model.eps, tour, drone_deliveries_from_s)
+    # def plotTours(self):
+    #     tuple_tours = self.getTupleTour()
+    #     drone_deliveries = get_customer_drone_edges(self.model)
+    #     drone_deliveries_from_s = None
+    #     for tour in tuple_tours:
+    #         for i, _ in tour:
+    #             if self.V[i].node_type == NodeType.DRONE_STATION:
+    #                 drone_deliveries_from_s = list(filter(lambda x: x[0] == i, drone_deliveries))
+    #         plotNodes(self.V, self.milp_model.eps, tour, drone_deliveries_from_s)
 
     def get_assigned_customers(self):
         print("entro in get_assigned_customers")
@@ -282,12 +285,14 @@ class Local_DASP:
         x_k_ij_indexes = [(k, i, j) for k in self.K for i in self.Vl_index for j in self.Vr_index]
         x_k_ij_indexes += [(k, i, j) for k in self.K for (i, j) in self.O_index]
 
+        # for (k, i, j) in x_k_ij_indexes:
+        #     print(f"(k,i,j): {(k,i,j)}")z
+
         self.x_k_ij = self.model.addVars(x_k_ij_indexes, vtype=GRB.BINARY, name="x_k_ij")
 
         # time truck k arrives at node i
         self.a_ki = self.model.addVars([(i, j) for i in self.K for j in self.V_index],
                                        vtype=GRB.CONTINUOUS, name="a_ki")
-
         # customer j served by drone d from drone station s
         self.y_d_j = self.model.addVars([(d, j) for d in self.milp_model.D for j in self.Vn_index],
                                         vtype=GRB.BINARY, name="y_d_j")
@@ -312,15 +317,24 @@ class Local_DASP:
                                == 1 for j in self.Vn_index), name="(18)")
 
         # Constraint (19.1)
-        second_step_node_indexes = list(chain(self.Vn_index, [ds_dasp_index], self.V_OS_index, self.V_end_index))
+        # second_step_node_indexes = list(chain(self.Vn_index, [ds_dasp_index], self.V_OS_index, self.V_end_index))
+        second_step_node_indexes = []
+        next_to_last_node_indexes = []
+        for k in self.K:
+            second_step_indexes = list(chain(self.Vn_index, [ds_dasp_index], self.V_OS_index, [self.V_end_index[k-1]]))
+            second_step_node_indexes.append(second_step_indexes)
 
-        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, k - 1, j] for j in second_step_node_indexes) == 1
+            next_to_last_indexes = list(chain(self.Vn_index, [ds_dasp_index], self.V_OE_index, [self.V_index[k-1]]))
+            print(next_to_last_indexes)
+            next_to_last_node_indexes.append(next_to_last_indexes)
+
+        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, k - 1, j] for j in second_step_node_indexes[k-1]) == 1
                                for k in self.K), name="(19.1)")
 
         # Constraint (19.2)
-        next_to_last_node_indexes = list(chain(self.Vn_index, [ds_dasp_index], self.V_OE_index, self.V_index[:self.k]))
+        # next_to_last_node_indexes = list(chain(self.Vn_index, [ds_dasp_index], self.V_OE_index, self.V_index[:self.k]))
         self.model.addConstrs(
-            (gp.quicksum(self.x_k_ij[k, i, self.V_end_index[k - 1]] for i in next_to_last_node_indexes) == 1 for k in
+            (gp.quicksum(self.x_k_ij[k, i, self.V_end_index[k - 1]] for i in next_to_last_node_indexes[k-1]) == 1 for k in
              self.K), name="(19.2)")
 
         # Constraint (20.1)
@@ -338,9 +352,12 @@ class Local_DASP:
         self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, oe, j] for j in self.Vr_index if j != os)
                                            for k in self.K) == 1 for (os, oe) in self.O_index), name="(22)")
 
+        # Constraint (23)
+        # self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] -
+        #                                    self.x_k_ij[k, os, oe] for i in self.Vl_index) == 0
+        #                        for k in self.K for (os, oe) in self.O_index), name="(23)")
 
-        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] -
-                                           self.x_k_ij[k, os, oe] for i in self.Vl_index) == 0
+        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index) - self.x_k_ij[k, os, oe] == 0
                                for k in self.K for (os, oe) in self.O_index), name="(23)")
 
         # Constraint (24)

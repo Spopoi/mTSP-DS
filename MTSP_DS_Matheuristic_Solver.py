@@ -11,7 +11,7 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
     def __init__(self, n, m, Dn=2, Kn=1, C=None, alpha=1.2, eps=100, nodes=None, custom_locations=None):
         super().__init__(n, m, Dn, Kn, C, alpha, eps, nodes, custom_locations)
         self.d_station_combos = self.get_all_d_station_combos()
-        self.save_nodes_location_to_file("test_locations")
+        # self.save_nodes_location_to_file("test_locations")
 
     def get_all_d_station_combos(self):
         return list(itertools.combinations(self.Vs, self.C))
@@ -59,5 +59,5 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
 if __name__ == "__main__":
     locs = Location.create_custom_location_list("test_locations")
     print(locs)
-    solver = MTSP_DS_Matheuristic_Solver(9, 1, 2, 2, 1, eps=150, custom_locations=locs)
+    solver = MTSP_DS_Matheuristic_Solver(8, 1, 2, 2, 1, eps=150, custom_locations=locs)
     solver.solve()

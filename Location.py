@@ -14,6 +14,7 @@ def create_custom_location_list(filepath: str):
             line = line.replace("(", "").replace(")", "").strip()
             # Suddividi la riga in coordinate usando lo spazio come delimitatore
             coordinates = line.split(" ")
+            print("Coordinates: ", coordinates)
             # Per ciascuna coppia di coordinate nella riga
             for coordinate in coordinates:
                 # Suddividi la coppia in latitudine e longitudine
