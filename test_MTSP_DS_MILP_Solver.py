@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from Location import Location
+from core.Location import Location
 from MTSP_DS_MILP_Solver import MTSP_DS_MILP_Solver
 
 

@@ -1,10 +1,9 @@
 from itertools import chain
 
-from Node import NodeType
+from core.Node import NodeType
 from gurobipy import gurobipy as gp, GRB
 
-from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTrucksTour_callback, plotNodes, \
-    getTrucksTour, varToCustomerDroneIndex, varToTupleIndex, get_customer_drone_edges
+from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTrucksTour_callback, getTrucksTour, varToCustomerDroneIndex, varToTupleIndex, get_customer_drone_edges
 
 
 class Local_DASP:

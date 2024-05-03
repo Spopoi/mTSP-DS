@@ -1,4 +1,4 @@
-from Node import NodeType, Node
+from core.Node import NodeType, Node
 
 
 class Customer(Node):

@@ -1,4 +1,4 @@
-from Node import Node, NodeType
+from core.Node import Node, NodeType
 
 
 class Depot(Node):

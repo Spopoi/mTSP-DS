@@ -1,13 +1,12 @@
 import gurobipy as gp
 import numpy as np
-from Node import Node
-from Customer import Customer
-from TourUtils import get_k_value, tourToTuple, _getTrucksTour, plotNodes, getTrucksTour
-from Truck import Truck
-from DroneStation import DroneStation
-from Location import Location, rand_location
-from Depot import Depot
-import matplotlib.pyplot as plt
+from core.Node import Node
+from core.Customer import Customer
+from TourUtils import tourToTuple, getTrucksTour
+from core.Truck import Truck
+from core.DroneStation import DroneStation
+from core.Location import Location, rand_location
+from core.Depot import Depot
 
 
 class MTSP_DS_Solver:
