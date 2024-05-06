@@ -21,10 +21,6 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
         nodes = [self.v[i] for i in nodes_index if i == self.v[i].index]
         return nodes
 
-    # def get_mtsp_locations(self, d_station_combo):
-    #     nodes = list(itertools.chain(self.Vn, d_station_combo))
-    #     return [self.v[i].location for i in nodes]
-
     def get_mtsp_tours(self, drone_stations):
         # locations = self.get_mtsp_locations(drone_stations)
         nodes = self.get_mtsp_nodes(drone_stations)
@@ -60,4 +56,5 @@ if __name__ == "__main__":
     locs = Location.create_custom_location_list("test_locations")
     print(locs)
     solver = MTSP_DS_Matheuristic_Solver(8, 1, 2, 2, 1, eps=150, custom_locations=locs)
+    # solver = MTSP_DS_Matheuristic_Solver(8, 1, 2, 2, 1, eps=150)
     solver.solve()
