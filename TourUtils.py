@@ -112,6 +112,7 @@ def plotTours(model, v, eps):
 
 
 def plotNodes(v, eps, tour_tuples=None, drone_deliveries=None):
+    print(tour_tuples)
     x_values = [node.location.x for node in v]
     y_values = [node.location.y for node in v]
 

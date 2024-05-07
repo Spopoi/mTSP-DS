@@ -22,7 +22,6 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
         return nodes
 
     def get_mtsp_tours(self, drone_stations):
-        # locations = self.get_mtsp_locations(drone_stations)
         nodes = self.get_mtsp_nodes(drone_stations)
         mtsp_solver = MTSP_DS_MILP_Solver(len(nodes), 0, 0, self.Kn,
                                           0, self.alpha, self.eps, nodes=nodes)
