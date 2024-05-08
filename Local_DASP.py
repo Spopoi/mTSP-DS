@@ -4,7 +4,7 @@ from core.Node import NodeType
 from gurobipy import gurobipy as gp, GRB
 
 from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTrucksTour_callback, getTrucksTour, \
-    varToCustomerDroneIndex, varToTupleIndex, get_customer_drone_edges, plotTours, plotNodes, tourToTuple, plot_dasp_tour
+    varToCustomerDroneIndex, varToTupleIndex, plot_dasp_tour
 
 
 class Local_DASP:
