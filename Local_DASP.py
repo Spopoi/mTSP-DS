@@ -4,13 +4,12 @@ from core.Node import NodeType
 from gurobipy import gurobipy as gp, GRB
 
 from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTrucksTour_callback, getTrucksTour, \
-    varToCustomerDroneIndex, varToTupleIndex, plot_dasp_tour
+    varToCustomerDroneIndex, varToTupleIndex, plot_dasp_tour, tourToTuple
 
 
 class Local_DASP:
     def __init__(self, model, solution, d_station):
         self.drone_to_customer = []
-        self.drone_to_customer_edges = []
         self.milp_model = model
         self.tours = solution["tours"]
         self.dasp_tours = []
@@ -180,7 +179,7 @@ class Local_DASP:
         self.model.optimize()
         tuple_tours = self.getTupleTour()
         # print("tuple_tours: ", tuple_tours)
-        self.get_drone_customer_edges()
+        self.get_drone_deliveries()
 
         final_dasp_tours = []
         for i, tour in enumerate(tuple_tours):
@@ -194,26 +193,13 @@ class Local_DASP:
         self.plot_dasp_tours()
         return self.dasp_solution
 
-    def tourToTuple(self, tour, k):
-        ordered_tuple_tour = []
-        tuple_tour = [varToTupleIndex(var) for var in tour]
-        filtered_tuple = list(filter(lambda x: x[0] == self.V_index[k], tuple_tour))[0]
-        ordered_tuple_tour.append(filtered_tuple)
-        tuple_tour.remove(filtered_tuple)
-        for i in range(len(tuple_tour)):
-            nextTuple = list(filter(lambda x: x[0] == filtered_tuple[1], tuple_tour))[0]
-            ordered_tuple_tour.append(nextTuple)
-            tuple_tour.remove(nextTuple)
-            filtered_tuple = nextTuple
-        return ordered_tuple_tour
-
     def getTupleTour(self):
         tours = getTrucksTour(self.model)
         tuple_tours = []
         for (i, tour) in enumerate(tours):
-            tuples_tour = self.tourToTuple(tour, i)
+            tuples_tour = tourToTuple(tour, self.V_index[i])
             tuple_tours.append(tuples_tour)
-        print(tuple_tours)
+        # print(tuple_tours)
         return tuple_tours
 
     def plot_dasp_tours(self):
@@ -224,13 +210,12 @@ class Local_DASP:
             print("ecco i tour completo dei nodi: ", complete_tour)
             plot_dasp_tour(complete_tour, self.milp_model.eps, self.V[self.ds_dasp_index], self.drone_to_customer)
 
-    def get_drone_customer_edges(self):
+    def get_drone_deliveries(self):
         customers_assigned_to_ds = []
         for decision_variable in self.model._vars:
             if "y_d_j" in decision_variable.varName:
                 if decision_variable.x == 1:
                     customer = varToCustomerDroneIndex(decision_variable)
-                    self.drone_to_customer_edges.append((self.ds_dasp_index, customer))
                     self.drone_to_customer.append(self.V[customer])
                     customers_assigned_to_ds.append(self.V[customer])
         self.assigned_customers.extend(customers_assigned_to_ds)

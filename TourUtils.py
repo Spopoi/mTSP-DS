@@ -39,18 +39,22 @@ def varToCustomerDroneIndex(var):
     return drone_index
 
 
-def tourToTuple(tour):
-    ordered_tuple_tour = []
+def tourToTuple(tour, k=None):
     tuple_tour = [varToTupleIndex(var) for var in tour]
-    # print("ECCOLO IL TUPLETOUR: ", tuple_tour)
-    filtered_tuple = list(filter(lambda x: x[0] == 0, tuple_tour))[0]
-    ordered_tuple_tour.append(filtered_tuple)
+    if k is not None:
+        filtered_tuple = list(filter(lambda x: x[0] == k, tuple_tour))[0]
+    else:
+        filtered_tuple = list(filter(lambda x: x[0] == 0, tuple_tour))[0]
+
+    ordered_tuple_tour = [filtered_tuple]
     tuple_tour.remove(filtered_tuple)
-    for i in range(len(tuple_tour)):
-        nextTuple = list(filter(lambda x: x[0] == filtered_tuple[1], tuple_tour))[0]
-        ordered_tuple_tour.append(nextTuple)
-        tuple_tour.remove(nextTuple)
-        filtered_tuple = nextTuple
+
+    for _ in range(len(tuple_tour)):
+        next_tuple = list(filter(lambda x: x[0] == filtered_tuple[1], tuple_tour))[0]
+        ordered_tuple_tour.append(next_tuple)
+        tuple_tour.remove(next_tuple)
+        filtered_tuple = next_tuple
+
     return ordered_tuple_tour
 
 
@@ -63,10 +67,10 @@ def get_customer_drone_edges(model):
     return drone_to_customers_edges
 
 
-def _getTrucksTour(vars, decision_checker):
+def _getTrucksTour(decision_variables, decision_checker):
     k_var_lists = {}
     truck_k_tour = []
-    for var in vars:
+    for var in decision_variables:
         if "x_k_ij" in var.varName:
             k = get_k_value(var.varName)
             if k not in k_var_lists:
