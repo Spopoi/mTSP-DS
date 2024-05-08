@@ -25,14 +25,9 @@ class Local_DASP:
         self.pre_dasp_nodes = []
         self.post_dasp_nodes = []
 
-        self.V_start = self.get_starter_nodes()
-        # print("V_start =", self.V_start)
-        self.Vn = self.get_ds_customers()
-        # print("Vn = ", self.Vn)
-        self.V_end = self.get_end_nodes()
-        # print("V_end =", self.V_end)
-        self.get_outlier_nodes()
-
+        self.V_start = None
+        self.Vn = None
+        self.V_end = None
         self.Vl = []
         self.Vr = []
         self.V = []
@@ -68,9 +63,18 @@ class Local_DASP:
         self.y_d_j = None
         self.a_ki = None
         self.x_k_ij_outliers = None
+
         self.init_model()
 
     def set_dasp_nodes(self):
+        self.V_start = self.get_starter_nodes()
+        # print("V_start =", self.V_start)
+        self.Vn = self.get_ds_customers()
+        # print("Vn = ", self.Vn)
+        self.V_end = self.get_end_nodes()
+        # print("V_end =", self.V_end)
+        self.get_outlier_nodes()
+
         self.Vl.extend(self.V_start)
         self.Vl.extend(self.Vn)
         self.Vl.append(self.milp_model.v[self.d_station])
@@ -245,7 +249,6 @@ class Local_DASP:
                     self.V_OS.append(node)
                     if len(self.local_tours[i]) == 1:
                         oe_node = node
-                        # self.traversal_cost[(node, node)] = 0
                     else:
                         oe_node = self.get_end_outlier(i, j + 1)
                     self.V_OE.append(oe_node)
@@ -308,7 +311,6 @@ class Local_DASP:
                                == 1 for j in self.Vn_index), name="(18)")
 
         # Constraint (19.1)
-        # second_step_node_indexes = list(chain(self.Vn_index, [ds_dasp_index], self.V_OS_index, self.V_end_index))
         second_step_node_indexes = []
         next_to_last_node_indexes = []
         for k in self.K:
@@ -316,14 +318,12 @@ class Local_DASP:
             second_step_node_indexes.append(second_step_indexes)
 
             next_to_last_indexes = list(chain(self.Vn_index, [self.ds_dasp_index], self.V_OE_index, [self.V_index[k-1]]))
-            # print(next_to_last_indexes)
             next_to_last_node_indexes.append(next_to_last_indexes)
 
         self.model.addConstrs((gp.quicksum(self.x_k_ij[k, k - 1, j] for j in second_step_node_indexes[k-1]) == 1
                                for k in self.K), name="(19.1)")
 
         # Constraint (19.2)
-        # next_to_last_node_indexes = list(chain(self.Vn_index, [ds_dasp_index], self.V_OE_index, self.V_index[:self.k]))
         self.model.addConstrs(
             (gp.quicksum(self.x_k_ij[k, i, self.V_end_index[k - 1]] for i in next_to_last_node_indexes[k-1]) == 1 for k in
              self.K), name="(19.2)")
@@ -336,11 +336,10 @@ class Local_DASP:
         self.model.addConstr((gp.quicksum(gp.quicksum(self.x_k_ij[k, self.ds_dasp_index, j] for j in self.Vr_index
                                                       if j != self.ds_dasp_index) for k in self.K) == 1), name="(20.2)")
 
-        # Aggiungi questa restrizione per bilanciare il flusso di ogni camion
+        # Constraint (custom: ds_flow_balance)
         self.model.addConstrs(((gp.quicksum(self.x_k_ij[k, i, self.ds_dasp_index] for i in self.Vl_index
                                             if i != self.ds_dasp_index) == gp.quicksum(self.x_k_ij[k, self.ds_dasp_index, j]
-                                                                                       for j in self.Vr_index if j != self.ds_dasp_index)) for k in self.K), name = "flow_balance")
-
+                                                                                       for j in self.Vr_index if j != self.ds_dasp_index)) for k in self.K), name = "ds_flow_balance")
 
         # Constraint (21)
         self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index if i != oe)
@@ -350,10 +349,6 @@ class Local_DASP:
                                            for k in self.K) == 1 for (os, oe) in self.O_index), name="(22)")
 
         # Constraint (23)
-        # self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] -
-        #                                    self.x_k_ij[k, os, oe] for i in self.Vl_index) == 0
-        #                        for k in self.K for (os, oe) in self.O_index), name="(23)")
-
         self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index) - self.x_k_ij[k, os, oe] == 0
                                for k in self.K for (os, oe) in self.O_index), name="(23)")
 
@@ -440,58 +435,3 @@ class Local_DASP:
                 cost += node.node_distance(tour[end_node_dasp_tour_index + i + 1])
             cost_after_end_k.append(cost)
         return cost_after_end_k
-
-    def set_start_variables(self):
-        # print("Entro nel set_start_var, ecco i dasp_tours: ", self.dasp_tours)
-        for k in range(len(self.dasp_tours)):
-            start_node = self.V_start[k]
-            start_node_tour = self.dasp_tours[k].index(start_node)
-
-            # Usa un ciclo while per controllare l'indice i
-            i = start_node_tour
-            while i < len(self.dasp_tours[k]) - 1:
-                node = self.dasp_tours[k][i]
-                if node == self.V_end[k]:
-                    break
-                end_node = self.dasp_tours[k][i + 1]
-                node_index = self.V.index(node)
-                end_node_index = self.V.index(end_node)
-                # print(f"{(k, i)} node_index: {node.index}, next node: {end_node.index}")
-
-                self.x_k_ij[k + 1, node_index, end_node_index].Start = 1
-                # print(f"set {k+1, node.index, end_node.index} = 1")
-
-                if end_node_index in self.V_OS_index:
-                    outlier_tuple = list(filter(lambda x: x[0] == end_node_index, self.O_index))[0]
-                    outlier_end_index = outlier_tuple[1]
-                    # print("outlier_end_index ", outlier_end_index)
-
-                    outlier_end_dasp_index = self.dasp_tours[k].index(self.V[outlier_end_index])
-                    # print("outlier_end_dasp_index ", outlier_end_dasp_index)
-
-                    next_step = self.V.index(self.dasp_tours[k][outlier_end_dasp_index + 1])
-                    # print("next_step ", next_step)
-
-                    self.x_k_ij[k + 1, outlier_end_index, next_step].Start = 1
-                    # print(f"set {k + 1, outlier_end_dasp_index, next_step + 1} = 1")
-
-                    # Aggiorna l'indice i dopo aver processato l'outlier
-                    i = outlier_end_dasp_index + 1
-                else:
-                    # Se non c'è un outlier, incrementa normalmente l'indice i
-                    i += 1
-
-    # def get_pre_dasp_tuples(self):
-    #     pre_dasp_tours = []
-    #     for k in self.K:
-    #         pre_dasp_tours.append([])
-    #         for (i, node) in enumerate(self.pre_dasp_nodes[k-1]):
-    #             # print(i, node)
-    #             # print(self.pre_dasp_nodes[k-1])
-    #             if i >= len(self.pre_dasp_nodes[k-1]) - 1:
-    #                 pre_dasp_tours[k-1].append((node.index, self.V_start[k-1].index))
-    #             else:
-    #                 next_node_index = self.pre_dasp_nodes[k-1][i+1].index
-    #                 pre_dasp_tours[k-1].append((node.index, next_node_index))
-    #     return pre_dasp_tours
-
