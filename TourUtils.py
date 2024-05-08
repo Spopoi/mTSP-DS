@@ -111,6 +111,66 @@ def plotTours(model, v, eps):
         plotNodes(v, eps, tour, drone_deliveries_from_s)
 
 
+def plot_dasp_tour(ordered_nodes, eps=150, ds=None, drone_deliveries=None):
+    x_values = [node.location.x for node in ordered_nodes]
+    y_values = [node.location.y for node in ordered_nodes]
+
+    node_types = [
+        'customer' if isinstance(node, Customer) else 'drone_station' if isinstance(node, DroneStation) else 'depot'
+        for node in ordered_nodes
+    ]
+
+    plt.plot(x_values, y_values, '-o', color='black', label='DASP Tour')
+
+    for node, node_type in zip(ordered_nodes[:-1], node_types[:-1]):
+        plt.annotate(str(node.index), (node.location.x, node.location.y), textcoords="offset points",
+                     xytext=(0, 10),
+                     ha='center')
+
+    for node, node_type in zip(ordered_nodes, node_types):
+        if node_type == 'customer':
+            plt.plot(node.location.x, node.location.y, 'bo', markersize=8)
+        elif node_type == "depot":  # depot
+            plt.plot(node.location.x, node.location.y, 'kD', markersize=7)
+
+    if ds:
+        plt.plot(ds.location.x, ds.location.y, 'r*', markersize=10)
+        circle = plt.Circle((ds.location.x, ds.location.y), eps / 2, color='red', fill=False,
+                            linestyle='dashed')
+        plt.gca().add_patch(circle)
+
+    blue_patch = plt.Line2D([0], [0], marker='o', color='w', label='Customer', markerfacecolor='blue',
+                            markersize=10)
+    red_patch = plt.Line2D([0], [0], marker='*', color='w', label='Drone Station', markerfacecolor='red',
+                           markersize=10)
+    black_patch = plt.Line2D([0], [0], marker='D', color='w', label='Depot', markerfacecolor='black', markersize=10)
+    green_patch = plt.Line2D([0], [0], marker='_', color='g', label='Drone delivery', markerfacecolor='green',
+                             markersize=10)
+    tour_patch = plt.Line2D([0], [0], marker='_', color='black', label='Truck tour', markerfacecolor='black',
+                            markersize=10)
+
+    plt.legend(handles=[black_patch, blue_patch, red_patch, green_patch, tour_patch])
+
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.title("Tour completo")
+
+    if drone_deliveries and ds:
+        for node in drone_deliveries:
+            plt.plot(node.location.x, node.location.y, 'bo', markersize=8)
+            plt.annotate(str(node.index), (node.location.x, node.location.y), textcoords="offset points",
+                         xytext=(0, 10),
+                         ha='center')
+            start_node = ds
+            end_node = node
+            plt.arrow(start_node.location.x, start_node.location.y,
+                      end_node.location.x - start_node.location.x,
+                      end_node.location.y - start_node.location.y,
+                      head_width=0.2, head_length=0.2, fc='green', ec='green')
+
+    plt.show()
+
+
 def plotNodes(v, eps, tour_tuples=None, drone_deliveries=None):
     print(tour_tuples)
     x_values = [node.location.x for node in v]
