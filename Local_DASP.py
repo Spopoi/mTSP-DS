@@ -48,7 +48,7 @@ class Local_DASP:
 
         self.set_nodes_index()
 
-        print("V: ", self.V)
+        # print("V: ", self.V)
         # print("V_indexes: ", [i for i in self.V_index])
         # print("Vn_index = ", [i for i in self.Vn_index])
 
@@ -207,7 +207,7 @@ class Local_DASP:
         for (k, tour) in enumerate(tuple_tours):
             nodes_served_by_drone = [self.V[i] for (i, _) in tour] + [self.V[tour[-1][1]]]
             complete_tour = self.pre_dasp_nodes[k] + nodes_served_by_drone + self.post_dasp_nodes[k]
-            print("ecco i tour completo dei nodi: ", complete_tour)
+            # print("ecco i tour completo dei nodi: ", complete_tour)
             plot_dasp_tour(complete_tour, self.milp_model.eps, self.V[self.ds_dasp_index], self.drone_to_customer)
 
     def get_drone_deliveries(self):
@@ -274,8 +274,17 @@ class Local_DASP:
         for k in self.K:
             for j in self.K:
                 if j != k:
-                    self.model.addConstr((gp.quicksum(self.x_k_ij[k, self.V_index[j - 1], i] for i in self.Vr_index) == 0), name="CC")
-                    self.model.addConstr((gp.quicksum(self.x_k_ij[k, i, self.V_end_index[j - 1]] for i in self.Vl_index) == 0), name="CC2")
+                    constraint_name_1 = f"CC_k{k}_j{j}"
+                    constraint_name_2 = f"CC2_k{k}_j{j}"
+
+                    self.model.addConstr(
+                        gp.quicksum(self.x_k_ij[k, self.V_index[j - 1], i] for i in self.Vr_index) == 0,
+                        name=constraint_name_1
+                    )
+                    self.model.addConstr(
+                        gp.quicksum(self.x_k_ij[k, i, self.V_end_index[j - 1]] for i in self.Vl_index) == 0,
+                        name=constraint_name_2
+                    )
 
         self.model.setObjective(self.tau_tilde, sense=GRB.MINIMIZE)
         self.model.update()

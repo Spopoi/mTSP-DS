@@ -48,12 +48,12 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
                 # local_dasp.plotTours()
                 print(f"Finito dasp con soluzione: {solution}")
             solution_pool.append(solution)
-        print(solution_pool)
+        print("Solution pool: ", solution_pool)
 
 
 if __name__ == "__main__":
-    locs = Location.create_custom_location_list("test_locations")
-    print(locs)
-    solver = MTSP_DS_Matheuristic_Solver(8, 1, 2, 2, 1, eps=150, custom_locations=locs)
-    # solver = MTSP_DS_Matheuristic_Solver(8, 1, 2, 2, 1, eps=150)
+    # locs = Location.create_custom_location_list("test_locations")
+    # print(locs)
+    # solver = MTSP_DS_Matheuristic_Solver(8, 1, 2, 2, 1, eps=150, custom_locations=locs)
+    solver = MTSP_DS_Matheuristic_Solver(8, 3, 2, 2, 2, eps=150)
     solver.solve()
