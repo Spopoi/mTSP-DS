@@ -48,8 +48,10 @@ def tourToTuple(tour, k=None):
 
     ordered_tuple_tour = [filtered_tuple]
     tuple_tour.remove(filtered_tuple)
+    # print(f"filt: {filtered_tuple} \n tuple tour update: {tuple_tour}")
 
     for _ in range(len(tuple_tour)):
+        # print(f"next tuples: {list(filter(lambda x: x[0] == filtered_tuple[1], tuple_tour))}")
         next_tuple = list(filter(lambda x: x[0] == filtered_tuple[1], tuple_tour))[0]
         ordered_tuple_tour.append(next_tuple)
         tuple_tour.remove(next_tuple)

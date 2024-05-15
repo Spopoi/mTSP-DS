@@ -37,7 +37,7 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
         solution_pool = []
         # print("d-combo", self.d_station_combos)
         for d_station_combo in self.d_station_combos:
-            solution = {"tours": [], "assigned_customers": []}
+            solution = {"tours": [], "assigned_customers": [], "value": []}
             solution["tours"].extend(self.get_mtsp_tours(d_station_combo))
             # solution = self.get_mtsp_tours(d_station_combo)
             for d_station in d_station_combo:
@@ -48,12 +48,14 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
                 # local_dasp.plotTours()
                 print(f"Finito dasp con soluzione: {solution}")
             solution_pool.append(solution)
+        best_solution = min(solution_pool, key=lambda x: x["value"])
         print("Solution pool: ", solution_pool)
+        print("Best sol: ", best_solution)
 
 
 if __name__ == "__main__":
     # locs = Location.create_custom_location_list("test_locations")
     # print(locs)
     # solver = MTSP_DS_Matheuristic_Solver(8, 1, 2, 2, 1, eps=150, custom_locations=locs)
-    solver = MTSP_DS_Matheuristic_Solver(8, 3, 2, 2, 2, eps=150)
+    solver = MTSP_DS_Matheuristic_Solver(8, 3, 2, 2, 2, eps=100)
     solver.solve()

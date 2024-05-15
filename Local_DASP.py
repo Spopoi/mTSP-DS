@@ -4,11 +4,12 @@ from core.Node import NodeType
 from gurobipy import gurobipy as gp, GRB
 
 from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTrucksTour_callback, getTrucksTour, \
-    varToCustomerDroneIndex, varToTupleIndex, plot_dasp_tour, tourToTuple
+    varToCustomerDroneIndex, plot_dasp_tour, tourToTuple
 
 
 class Local_DASP:
     def __init__(self, model, solution, d_station):
+        print(f"Entro in local_DASP d: {d_station} \n con sol: {solution}")
         self.drone_to_customer = []
         self.milp_model = model
         self.tours = solution["tours"]
@@ -32,6 +33,9 @@ class Local_DASP:
         self.V = []
 
         self.set_dasp_nodes()
+        # print("V = ", self.V)
+        # print("V_Start = ", self.V_start)
+        # print("V_End = ", self.V_end)
 
         self.K = range(1, len(self.dasp_tours) + 1)
         self.k = len(self.dasp_tours)
@@ -47,6 +51,8 @@ class Local_DASP:
         self.ds_dasp_index = None
 
         self.set_nodes_index()
+
+        # print("V_indexes = ", self.V_index)
 
         # print("V: ", self.V)
         # print("V_indexes: ", [i for i in self.V_index])
@@ -142,11 +148,12 @@ class Local_DASP:
                     cost_to_start_i += node.node_distance(self.tours[i][j - 1])
             if self.tours[i] not in self.dasp_tours:
                 self.dasp_solution["tours"].append(self.tours[i])
+                # TODO: add value
         return starter_nodes
 
     def get_ds_customers(self):
         Vn = []
-        for tour in self.tours:
+        for tour in self.dasp_tours:
             for node in tour:
                 if (node.node_type == NodeType.CUSTOMER and node.node_distance(
                         self.milp_model.v[self.d_station]) <= self.milp_model.eps / 2
@@ -189,6 +196,7 @@ class Local_DASP:
         self.dasp_solution["tours"].extend(final_dasp_tours)
         # self.dasp_solution["assigned_customers"].extend(assigned_customers)
         self.dasp_solution["assigned_customers"] = self.assigned_customers
+        self.dasp_solution["value"] = self.getSolution()
         # plotTours(self.model, self.V, self.milp_model.eps)
         self.plot_dasp_tours()
         return self.dasp_solution
@@ -197,6 +205,7 @@ class Local_DASP:
         tours = getTrucksTour(self.model)
         tuple_tours = []
         for (i, tour) in enumerate(tours):
+            # print(f"tour: {tour} \n k = {self.V_index[i]}")
             tuples_tour = tourToTuple(tour, self.V_index[i])
             tuple_tours.append(tuples_tour)
         # print(tuple_tours)
@@ -286,6 +295,8 @@ class Local_DASP:
                         name=constraint_name_2
                     )
 
+        self.model.addConstrs(self.x_k_ij[k, i, j] == 0 for i in self.Vl_index for j in self.Vr_index if i == j for k in self.K)
+
         self.model.setObjective(self.tau_tilde, sense=GRB.MINIMIZE)
         self.model.update()
         # CONSTRAINTS
@@ -356,7 +367,7 @@ class Local_DASP:
         self.model.addConstrs((self.cost_to_start_k[k - 1] == self.a_ki[k, k - 1] for k in self.K), name="(25)")
 
         # Constraint (26)
-        M = 1000
+        M = 10000
         earliest_arrival_time_set = list(chain(self.Vn_index, [self.ds_dasp_index], self.V_OS_index))
         self.model.addConstrs((M * (self.x_k_ij[k, i, j] - 1) + self.a_ki[k, i]
                                + self.milp_model.t_ij[self.V[i].index, self.V[j].index] <= self.a_ki[k, j]
