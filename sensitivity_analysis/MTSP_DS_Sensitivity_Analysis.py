@@ -9,12 +9,13 @@ def compute_average_solution(n, num_trials):
     execTimes = []
     for i in range(num_trials):
         # loc = [Location(100, 130), Location(100, 90), Location(120, 100), Location(100, 100), Location(49,49)]
-        solver = MTSP_DS_MILP_Solver(6, 1, 2, 2)
-
+        solver = MTSP_DS_MILP_Solver(8, 2, 2, 2)
+        solver.showOptimisationLog(True)
         solver.solve()
         solver.save_nodes_location_to_file("test_locations")
         execTime = solver.getExecTime()
         solver.printExecutionLog()
+
         execTimes.append(execTime)
         plotTours(solver.getModel(), solver.v, solver.eps)
     average_exec_time = np.mean(execTimes, axis=0)

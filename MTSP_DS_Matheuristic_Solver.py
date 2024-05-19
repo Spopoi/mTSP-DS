@@ -1,6 +1,6 @@
 import itertools
+import time
 
-from core import Location
 from Local_DASP import Local_DASP
 from MTSP_DS_MILP_Solver import MTSP_DS_MILP_Solver
 from MTSP_DS_Solver import MTSP_DS_Solver
@@ -9,9 +9,14 @@ from MTSP_DS_Solver import MTSP_DS_Solver
 class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
 
     def __init__(self, n, m, Dn=2, Kn=1, C=None, alpha=1.2, eps=100, nodes=None, custom_locations=None):
+        self.start_time = time.time()
         super().__init__(n, m, Dn, Kn, C, alpha, eps, nodes, custom_locations)
         self.d_station_combos = self.get_all_d_station_combos()
+        self.execTime = 0
         # self.save_nodes_location_to_file("test_locations")
+
+    def getExecTime(self):
+        return self.execTime
 
     def get_all_d_station_combos(self):
         return list(itertools.combinations(self.Vs, self.C))
@@ -26,7 +31,7 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
         mtsp_solver = MTSP_DS_MILP_Solver(len(nodes), 0, 0, self.Kn,
                                           0, self.alpha, self.eps, nodes=nodes)
         mtsp_solver.solve()
-        print("mtsp_solution = ", mtsp_solver.getSolution())
+        # print("mtsp_solution = ", mtsp_solver.getSolution())
         mtsp_solver.plot_tours()
         tours = mtsp_solver.NodesTour()
         for tour in tours:
@@ -41,16 +46,19 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
             solution["tours"].extend(self.get_mtsp_tours(d_station_combo))
             # solution = self.get_mtsp_tours(d_station_combo)
             for d_station in d_station_combo:
-                print(f"d_station: {d_station}, in d_station_combo: {d_station_combo}")
+                # print(f"d_station: {d_station}, in d_station_combo: {d_station_combo}")
                 # solution = self.solve_local_dasp(solution, d_station)
                 local_dasp = Local_DASP(self, solution, d_station)
                 solution = local_dasp.solve()
                 # local_dasp.plotTours()
-                print(f"Finito dasp con soluzione: {solution}")
+                # print(f"Finito dasp con soluzione: {solution}")
             solution_pool.append(solution)
         best_solution = min(solution_pool, key=lambda x: x["value"])
-        print("Solution pool: ", solution_pool)
-        print("Best sol: ", best_solution)
+        # print("Solution pool: ", solution_pool)
+        # print("Best sol: ", best_solution)
+        end_time = time.time()
+        self.execTime = end_time - self.start_time
+        print(f"exec time: {self.execTime}")
 
 
 if __name__ == "__main__":
