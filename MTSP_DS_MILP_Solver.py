@@ -14,6 +14,9 @@ class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
         super().__init__(n, m, Dn, Kn, C, alpha, eps, nodes, custom_locations)
 
         self.V = np.arange(len(self.v))
+        print("MILP v: ", self.v)
+        print("MILP V: ", self.V)
+        print("MILP Vn: ", self.Vn)
         self.Vl = self.V[:-1]
         self.Vr = self.V[1:]
         self.H = list(itertools.chain(self.Vn, self.Vs))  # Vn u Vs
@@ -69,12 +72,15 @@ class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
              gp.quicksum(gp.quicksum(self.y_d_sj[d, s, j] for d in self.D) for s in self.Vs) == 1 for j in self.Vn),
             name="(4)")
 
+        customer_ds_indexes = list(itertools.chain(self.Vn, self.Vs))
+        print("indiciiii: ", customer_ds_indexes)
+
         # Constraint (5.1)
-        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, 0, j] for j in self.Vn) == 1 for k in self.K), name="(5.1)")
+        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, 0, j] for j in customer_ds_indexes) == 1 for k in self.K), name="(5.1)")
 
         # Constraint (5.2)
         self.model.addConstrs(
-            (gp.quicksum(self.x_k_ij[k, i, 1 + self.n + self.m] for i in self.Vn) == 1 for k in self.K), name="(5.2)")
+            (gp.quicksum(self.x_k_ij[k, i, 1 + self.n + self.m] for i in customer_ds_indexes) == 1 for k in self.K), name="(5.2)")
 
         # Constraint (6)
         self.model.addConstrs(((gp.quicksum(self.x_k_ij[k, i, h] for i in self.Vl if i != h)

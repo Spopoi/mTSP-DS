@@ -7,6 +7,7 @@ from core.Truck import Truck
 from core.DroneStation import DroneStation
 from core.Location import Location, rand_location
 from core.Depot import Depot
+from vrp_loader import get_dataset
 
 
 class MTSP_DS_Solver:

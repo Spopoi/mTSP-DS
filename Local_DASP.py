@@ -96,6 +96,7 @@ class Local_DASP:
         self.V.extend(self.V_OS)
         self.V.extend(self.V_OE)
         self.V.extend(self.V_end)
+        print("Nodes V: ")
 
     def set_nodes_index(self):
         self.V_index = range(len(self.V))
