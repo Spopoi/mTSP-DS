@@ -13,9 +13,10 @@ def compute_average_solution(n, num_trials):
         # loc = [Location(100, 130), Location(100, 90), Location(120, 100), Location(100, 100), Location(49,49)]
         # locs = get_locations()
         # print("locs" , locs)
-        locs = Location.create_custom_location_list("test_locations")
-        print(locs)
-        solver = MTSP_DS_MILP_Solver(n, 2, 2, 2, 2, eps=150, custom_locations=locs)
+        # locs = Location.create_custom_location_list("test_locations")
+        # print(locs)
+        # solver = MTSP_DS_MILP_Solver(n, 2, 2, 2, 2, eps=150, custom_locations=locs)
+        solver = MTSP_DS_MILP_Solver(n, 2, 2, 2, 2, eps=150)
 
         # solver = MTSP_DS_MILP_Solver(n, 2, 2, 10)
         solver.showOptimisationLog(True)
@@ -46,8 +47,8 @@ def plot_results_for_n(values, num_trials=1):
 
 
 if __name__ == "__main__":
-    n_values = [12]
-    plot_results_for_n(n_values, 1)
+    n_values = [8]
+    plot_results_for_n(n_values, 3)
     # load dataset
     # locs = get_locations()
     plot_results_for_n(n_values)

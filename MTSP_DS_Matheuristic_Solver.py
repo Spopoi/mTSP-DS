@@ -47,7 +47,7 @@ class MTSP_DS_Matheuristic_Solver(MTSP_DS_Solver):
             solution["tours"].extend(self.get_mtsp_tours(d_station_combo))
             # solution = self.get_mtsp_tours(d_station_combo)
             for d_station in d_station_combo:
-                # print(f"d_station: {d_station}, in d_station_combo: {d_station_combo}")
+                print(f"d_station: {d_station}, in d_station_combo: {d_station_combo}")
                 # solution = self.solve_local_dasp(solution, d_station)
                 local_dasp = Local_DASP(self, solution, d_station)
                 solution = local_dasp.solve()

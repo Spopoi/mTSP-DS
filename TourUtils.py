@@ -109,11 +109,12 @@ def getTupleTour(model):
 def plotTours(model, v, eps):
     tuple_tours = getTupleTour(model)
     drone_deliveries = get_customer_drone_edges(model)
-    drone_deliveries_from_s = None
+    print("drone deliveries: ", drone_deliveries)
     for tour in tuple_tours:
+        drone_deliveries_from_s = []
         for i, _ in tour:
             if v[i].node_type == NodeType.DRONE_STATION:
-                drone_deliveries_from_s = list(filter(lambda x: x[0] == i, drone_deliveries))
+                drone_deliveries_from_s.extend(list(filter(lambda x: x[0] == i, drone_deliveries)))
         plotNodes(v, eps, tour, drone_deliveries_from_s)
 
 

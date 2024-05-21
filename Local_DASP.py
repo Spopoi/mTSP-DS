@@ -184,6 +184,7 @@ class Local_DASP:
 
     def solve(self):
         # self.model.optimize(self.subtourelim)
+        self.model.setParam('OutputFlag', 1)
         self.model.optimize()
         tuple_tours = self.getTupleTour()
         # print("tuple_tours: ", tuple_tours)

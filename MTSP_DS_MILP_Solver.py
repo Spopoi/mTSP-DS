@@ -15,8 +15,8 @@ class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
 
         self.V = np.arange(len(self.v))
         print("MILP v: ", self.v)
-        print("MILP V: ", self.V)
-        print("MILP Vn: ", self.Vn)
+        # print("MILP V: ", self.V)
+        # print("MILP Vn: ", self.Vn)
         self.Vl = self.V[:-1]
         self.Vr = self.V[1:]
         self.H = list(itertools.chain(self.Vn, self.Vs))  # Vn u Vs
@@ -121,7 +121,7 @@ class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
         self.model._edges = self.x_k_ij
         self.model._vars = self.model.getVars()
 
-        self.showOptimisationLog(False)
+        self.showOptimisationLog(True)
         self.model.Params.lazyConstraints = 1
 
     def subtourelim(self, model, where):
