@@ -14,7 +14,7 @@ class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
         super().__init__(n, m, Dn, Kn, C, alpha, eps, nodes, custom_locations)
 
         self.V = np.arange(len(self.v))
-        print("MILP v: ", self.v)
+        # print("MILP v: ", self.v)
         # print("MILP V: ", self.V)
         # print("MILP Vn: ", self.Vn)
         self.Vl = self.V[:-1]
@@ -73,7 +73,7 @@ class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
             name="(4)")
 
         customer_ds_indexes = list(itertools.chain(self.Vn, self.Vs))
-        print("indiciiii: ", customer_ds_indexes)
+        # print("indiciiii: ", customer_ds_indexes)
 
         # Constraint (5.1)
         self.model.addConstrs((gp.quicksum(self.x_k_ij[k, 0, j] for j in customer_ds_indexes) == 1 for k in self.K), name="(5.1)")
@@ -121,7 +121,7 @@ class MTSP_DS_MILP_Solver(MTSP_DS_Solver):
         self.model._edges = self.x_k_ij
         self.model._vars = self.model.getVars()
 
-        self.showOptimisationLog(True)
+        self.showOptimisationLog(False)
         self.model.Params.lazyConstraints = 1
 
     def subtourelim(self, model, where):

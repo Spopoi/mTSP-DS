@@ -58,6 +58,7 @@ class MTSP_DS_Solver:
 
     def random_init(self):
         # customers:
+        # print(f"Vn: {self.Vn}, Vs: {self.Vs}")
         for i in self.Vn:
             self.v.append(Customer(i, rand_location()))
         # Drone stations:

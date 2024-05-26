@@ -96,7 +96,7 @@ class Local_DASP:
         self.V.extend(self.V_OS)
         self.V.extend(self.V_OE)
         self.V.extend(self.V_end)
-        print("Nodes V: ")
+        # print("Nodes V: ", self.V)
 
     def set_nodes_index(self):
         self.V_index = range(len(self.V))
@@ -184,7 +184,7 @@ class Local_DASP:
 
     def solve(self):
         # self.model.optimize(self.subtourelim)
-        self.model.setParam('OutputFlag', 1)
+        # self.model.setParam('OutputFlag', 1)
         self.model.optimize()
         tuple_tours = self.getTupleTour()
         # print("tuple_tours: ", tuple_tours)

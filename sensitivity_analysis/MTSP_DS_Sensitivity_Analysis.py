@@ -3,8 +3,6 @@ import matplotlib.pyplot as plt
 
 from MTSP_DS_MILP_Solver import MTSP_DS_MILP_Solver
 from TourUtils import plotTours
-from core import Location
-from vrp_loader import get_dataset, get_locations
 
 
 def compute_average_solution(n, num_trials):
@@ -19,7 +17,7 @@ def compute_average_solution(n, num_trials):
         solver = MTSP_DS_MILP_Solver(n, 2, 2, 2, 2, eps=150)
 
         # solver = MTSP_DS_MILP_Solver(n, 2, 2, 10)
-        solver.showOptimisationLog(True)
+        # solver.showOptimisationLog(True)
         solver.solve()
         # solver.save_nodes_location_to_file("test_locations")
         execTime = solver.getExecTime()
