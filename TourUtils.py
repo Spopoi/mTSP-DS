@@ -41,6 +41,7 @@ def varToCustomerDroneIndex(var):
 
 def tourToTuple(tour, k=None):
     tuple_tour = [varToTupleIndex(var) for var in tour]
+    print("tuple_tour: ", tuple_tour)
     if k is not None:
         filtered_tuple = list(filter(lambda x: x[0] == k, tuple_tour))[0]
     else:

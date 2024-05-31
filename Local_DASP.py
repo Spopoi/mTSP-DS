@@ -33,9 +33,9 @@ class Local_DASP:
         self.V = []
 
         self.set_dasp_nodes()
-        # print("V = ", self.V)
-        # print("V_Start = ", self.V_start)
-        # print("V_End = ", self.V_end)
+        print("V = ", self.V)
+        print("V_Start = ", self.V_start)
+        print("V_End = ", self.V_end)
 
         self.K = range(1, len(self.dasp_tours) + 1)
         self.k = len(self.dasp_tours)
@@ -79,6 +79,7 @@ class Local_DASP:
         self.V_end = self.get_end_nodes()
         # print("V_end =", self.V_end)
         self.get_outlier_nodes()
+        print("O = ", self.O)
 
         self.Vl.extend(self.V_start)
         self.Vl.extend(self.Vn)
@@ -118,7 +119,7 @@ class Local_DASP:
         self.V_OE_index = self.V_index[vr_index:vr_index + len(self.V_OE)]
 
         self.O_index = list(zip(self.V_OS_index, self.V_OE_index))
-        # print("O_index: ", self.O_index)
+        print("O_index: ", self.O_index)
 
         self.V_end_index = self.V_index[-self.k:]
         # print("V_end_index: ", self.V_end_index)
@@ -205,9 +206,10 @@ class Local_DASP:
 
     def getTupleTour(self):
         tours = getTrucksTour(self.model)
+        print("Tours: ", tours)
         tuple_tours = []
         for (i, tour) in enumerate(tours):
-            # print(f"tour: {tour} \n k = {self.V_index[i]}")
+            print(f"tour: {tour} \n k = {self.V_index[i]}")
             tuples_tour = tourToTuple(tour, self.V_index[i])
             tuple_tours.append(tuples_tour)
         # print(tuple_tours)
@@ -282,9 +284,11 @@ class Local_DASP:
         self.model.update()
 
         # Constraint (custom)
+        print(self.K)
         for k in self.K:
             for j in self.K:
                 if j != k:
+                    print(f"k = {k}, j ={j}")
                     constraint_name_1 = f"CC_k{k}_j{j}"
                     constraint_name_2 = f"CC2_k{k}_j{j}"
 
@@ -298,6 +302,11 @@ class Local_DASP:
                     )
 
         self.model.addConstrs(self.x_k_ij[k, i, j] == 0 for i in self.Vl_index for j in self.Vr_index if i == j for k in self.K)
+        # Constraint (custom: ds_flow_balance)
+        # self.model.addConstrs(((gp.quicksum(self.x_k_ij[k, i, self.ds_dasp_index] for i in self.Vl_index
+        #                                     if i != self.ds_dasp_index) == gp.quicksum(
+        #     self.x_k_ij[k, self.ds_dasp_index, j]
+        #     for j in self.Vr_index if j != self.ds_dasp_index)) for k in self.K), name="ds_flow_balance")
 
         self.model.setObjective(self.tau_tilde, sense=GRB.MINIMIZE)
         self.model.update()
@@ -343,17 +352,16 @@ class Local_DASP:
         self.model.addConstr((gp.quicksum(gp.quicksum(self.x_k_ij[k, self.ds_dasp_index, j] for j in self.Vr_index
                                                       if j != self.ds_dasp_index) for k in self.K) == 1), name="(20.2)")
 
-        # Constraint (custom: ds_flow_balance)
-        self.model.addConstrs(((gp.quicksum(self.x_k_ij[k, i, self.ds_dasp_index] for i in self.Vl_index
-                                            if i != self.ds_dasp_index) == gp.quicksum(self.x_k_ij[k, self.ds_dasp_index, j]
-                                                                                       for j in self.Vr_index if j != self.ds_dasp_index)) for k in self.K), name = "ds_flow_balance")
+        # # Constraint (21)
+        # self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index if i != oe)
+        #                                    for k in self.K) == 1 for (os, oe) in self.O_index), name="(21)")
+        # # Constraint (22)
+        # self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, oe, j] for j in self.Vr_index if j != os)
+        #                                    for k in self.K) == 1 for (os, oe) in self.O_index), name="(22)")
 
-        # Constraint (21)
-        self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index if i != oe)
-                                           for k in self.K) == 1 for (os, oe) in self.O_index), name="(21)")
-        # Constraint (22)
-        self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, oe, j] for j in self.Vr_index if j != os)
-                                           for k in self.K) == 1 for (os, oe) in self.O_index), name="(22)")
+        # Constraint (21-22)
+        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index if i != oe) - gp.quicksum(self.x_k_ij[k, oe, j] for j in self.Vr_index if j != os) == 0
+                                           for k in self.K for (os, oe) in self.O_index), name="(21-22)")
 
         # Constraint (23)
         self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index) - self.x_k_ij[k, os, oe] == 0
@@ -402,13 +410,16 @@ class Local_DASP:
             x_k_ij = model._edges
             for truck_tour in tours:
                 node_indexes = getVisitedNodesIndex(truck_tour)
-                # print("node_indexes", node_indexes)
+                print(f"Truck tour: {truck_tour}")
+                print("node_indexes", node_indexes)
+                # num_of_dasp_tours = len(self.dasp_tours)
                 sub_tours_indexes = generate_sub_tours_indexes(node_indexes[1:-1])
-                # print("sub_tours_indexes", sub_tours_indexes)
+                print("sub_tours_indexes", sub_tours_indexes)
                 # Constraint (13)
                 for S in sub_tours_indexes:
                     model.cbLazy(
-                        gp.quicksum(gp.quicksum(x_k_ij[truck_index, i, j] for j in S if i != j) for i in S)
+                        gp.quicksum(gp.quicksum(x_k_ij[truck_index, i, j] for j in S if i != j and
+                                                x_k_ij[truck_index, i, j] in self.model._edges) for i in S)
                         <= len(S) - 1)
                     model.update()
                 truck_index += 1
