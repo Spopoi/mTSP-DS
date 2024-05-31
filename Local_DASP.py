@@ -242,8 +242,7 @@ class Local_DASP:
             j = 0
             while j < len(self.local_tours[i]):
                 node = self.local_tours[i][j]
-                if node.node_type == NodeType.CUSTOMER and node.node_distance(
-                        self.milp_model.v[self.d_station]) > self.milp_model.eps / 2:
+                if node.node_distance(self.milp_model.v[self.d_station]) > self.milp_model.eps / 2:
                     self.V_OS.append(node)
                     if len(self.local_tours[i]) == 1:
                         oe_node = node
