@@ -41,7 +41,6 @@ def varToCustomerDroneIndex(var):
 
 def tourToTuple(tour, k=None):
     tuple_tour = [varToTupleIndex(var) for var in tour]
-    print("tuple_tour: ", tuple_tour)
     if k is not None:
         filtered_tuple = list(filter(lambda x: x[0] == k, tuple_tour))[0]
     else:
@@ -49,15 +48,11 @@ def tourToTuple(tour, k=None):
 
     ordered_tuple_tour = [filtered_tuple]
     tuple_tour.remove(filtered_tuple)
-    # print(f"filt: {filtered_tuple} \n tuple tour update: {tuple_tour}")
-
     for _ in range(len(tuple_tour)):
-        # print(f"next tuples: {list(filter(lambda x: x[0] == filtered_tuple[1], tuple_tour))}")
         next_tuple = list(filter(lambda x: x[0] == filtered_tuple[1], tuple_tour))[0]
         ordered_tuple_tour.append(next_tuple)
         tuple_tour.remove(next_tuple)
         filtered_tuple = next_tuple
-
     return ordered_tuple_tour
 
 
@@ -147,17 +142,8 @@ def plot_dasp_tour(ordered_nodes, eps=150, ds=None, drone_deliveries=None):
                             linestyle='dashed')
         plt.gca().add_patch(circle)
 
-    blue_patch = plt.Line2D([0], [0], marker='o', color='w', label='Customer', markerfacecolor='blue',
-                            markersize=10)
-    red_patch = plt.Line2D([0], [0], marker='*', color='w', label='Drone Station', markerfacecolor='red',
-                           markersize=10)
-    black_patch = plt.Line2D([0], [0], marker='D', color='w', label='Depot', markerfacecolor='black', markersize=10)
-    green_patch = plt.Line2D([0], [0], marker='_', color='g', label='Drone delivery', markerfacecolor='green',
-                             markersize=10)
-    tour_patch = plt.Line2D([0], [0], marker='_', color='black', label='Truck tour', markerfacecolor='black',
-                            markersize=10)
-
-    plt.legend(handles=[black_patch, blue_patch, red_patch, green_patch, tour_patch])
+    patches_list = get_plot_patches()
+    plt.legend(handles=patches_list)
 
     plt.xlabel("X")
     plt.ylabel("Y")
@@ -175,8 +161,20 @@ def plot_dasp_tour(ordered_nodes, eps=150, ds=None, drone_deliveries=None):
                       end_node.location.x - start_node.location.x,
                       end_node.location.y - start_node.location.y,
                       head_width=0.2, head_length=0.2, fc='green', ec='green')
-
     plt.show()
+
+
+def get_plot_patches():
+    blue_patch = plt.Line2D([0], [0], marker='o', color='w', label='Customer', markerfacecolor='blue',
+                            markersize=10)
+    red_patch = plt.Line2D([0], [0], marker='*', color='w', label='Drone Station', markerfacecolor='red',
+                           markersize=10)
+    black_patch = plt.Line2D([0], [0], marker='D', color='w', label='Depot', markerfacecolor='black', markersize=10)
+    green_patch = plt.Line2D([0], [0], marker='_', color='g', label='Drone delivery', markerfacecolor='green',
+                             markersize=10)
+    tour_patch = plt.Line2D([0], [0], marker='_', color='black', label='Truck tour', markerfacecolor='black',
+                            markersize=10)
+    return [black_patch, blue_patch, green_patch, red_patch, tour_patch]
 
 
 def plotNodes(v, eps, tour_tuples=None, drone_deliveries=None):
@@ -205,17 +203,8 @@ def plotNodes(v, eps, tour_tuples=None, drone_deliveries=None):
         else:  # depot
             plt.plot(node.location.x, node.location.y, 'kD', markersize=7)
 
-    blue_patch = plt.Line2D([0], [0], marker='o', color='w', label='Customer', markerfacecolor='blue',
-                            markersize=10)
-    red_patch = plt.Line2D([0], [0], marker='s', color='w', label='Drone Station', markerfacecolor='red',
-                           markersize=10)
-    black_patch = plt.Line2D([0], [0], marker='o', color='w', label='Depot', markerfacecolor='black', markersize=10)
-    green_patch = plt.Line2D([0], [0], marker='_', color='g', label='Drone delivery', markerfacecolor='green',
-                             markersize=10)
-    tour_patch = plt.Line2D([0], [0], marker='_', color='black', label='Truck tour', markerfacecolor='black',
-                            markersize=10)
-
-    plt.legend(handles=[black_patch, red_patch, blue_patch, green_patch, tour_patch])
+    patches_list = get_plot_patches()
+    plt.legend(handles=patches_list)
 
     for node, node_type in zip(v, node_types):
         if node_type == 'drone_station':

@@ -1,9 +1,8 @@
 import math
-
 import numpy as np
 
 
-def create_custom_location_list(filepath: str):
+def read_location_list_from_file(filepath: str):
     custom_location_list = []
     with open(filepath, 'r') as file:
         for line in file:
@@ -14,6 +13,14 @@ def create_custom_location_list(filepath: str):
                 location = Location(latitude, longitude)
                 custom_location_list.append(location)
     return custom_location_list
+
+
+def save_node_locations_to_file(v, filepath: str):
+    with open(filepath, 'a') as file:
+        for node in v[1:]:
+            location = node.location
+            file.write(f"{location} ")
+        file.write("\n")
 
 
 def rand_location(maxLocationBound=150):

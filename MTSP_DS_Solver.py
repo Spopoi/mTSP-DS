@@ -5,7 +5,7 @@ from core.Customer import Customer
 from TourUtils import tourToTuple, getTrucksTour
 from core.Truck import Truck
 from core.DroneStation import DroneStation
-from core.Location import Location, rand_location
+from core.Location import Location, rand_location, save_node_locations_to_file
 from core.Depot import Depot
 from vrp_loader import get_dataset
 
@@ -43,10 +43,7 @@ class MTSP_DS_Solver:
             self.random_init()
         # Ending depot
         self.v.append(Depot(self.n + self.m + 1, Location(0, 0)))
-
-        # print("v= ", self.v)
         self.t_ij, self.t_ij_drone = self.calculate_distance_matrices()
-        # self.plotNodes()
 
     def nodes_init(self, locations):
         # customers:
@@ -58,20 +55,11 @@ class MTSP_DS_Solver:
 
     def random_init(self):
         # customers:
-        # print(f"Vn: {self.Vn}, Vs: {self.Vs}")
         for i in self.Vn:
             self.v.append(Customer(i, rand_location()))
         # Drone stations:
         for j in self.Vs:
             self.v.append(DroneStation(j, rand_location(), self.Dn))
-        # self.plotNodes()
-
-    def save_nodes_location_to_file(self, filepath: str):
-        with open(filepath, 'a') as file:
-            for node in self.v[1:]:
-                location = node.location
-                file.write(f"{location} ")
-            file.write("\n")
 
     def calculate_distance_matrices(self):
         num_nodes = len(self.v)
@@ -91,21 +79,21 @@ class MTSP_DS_Solver:
             self.model.setParam('OutputFlag', 0)
 
     def get_nodes_location(self):
-        loc = []
-        for node in self.v:
-            loc.append(node.location)
-        return loc
+        return self.v
 
-    def NodesTour(self):
-        nodes_tours = []
+    def save_node_locations(self, filename):
+        save_node_locations_to_file(self.v, filename)
+
+    def get_node_tours(self):
+        node_tours = []
         tours = getTrucksTour(self.model)
         for tour in tours:
             tour_tuples = tourToTuple(tour)
             tour_node = []
             for tour_tuple in tour_tuples:
                 tour_node.append(self.v[tour_tuple[0]])
-            nodes_tours.append(tour_node)
-        return nodes_tours
+            node_tours.append(tour_node)
+        return node_tours
 
     def getModel(self):
         return self.model

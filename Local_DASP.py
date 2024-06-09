@@ -9,7 +9,6 @@ from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTruck
 
 class Local_DASP:
     def __init__(self, model, solution, d_station):
-        print(f"Entro in local_DASP d: {d_station} \n con sol: {solution}")
         self.drone_to_customer = []
         self.milp_model = model
         self.tours = solution["tours"]
@@ -33,9 +32,6 @@ class Local_DASP:
         self.V = []
 
         self.set_dasp_nodes()
-        print("V = ", self.V)
-        print("V_Start = ", self.V_start)
-        print("V_End = ", self.V_end)
 
         self.K = range(1, len(self.dasp_tours) + 1)
         self.k = len(self.dasp_tours)
@@ -52,16 +48,6 @@ class Local_DASP:
 
         self.set_nodes_index()
 
-        # print("V_indexes = ", self.V_index)
-
-        # print("V: ", self.V)
-        # print("V_indexes: ", [i for i in self.V_index])
-        # print("Vn_index = ", [i for i in self.Vn_index])
-
-        # self.pre_dasp_tuples = self.get_pre_dasp_tuples()
-        # print(f"pre nodes: {self.pre_dasp_nodes}, edges: {self.pre_dasp_tuples}")
-        # self.post_dasp_tours = []
-
         self.model = None
         self.tau_tilde = None
         self.x_k_ij = None
@@ -73,13 +59,9 @@ class Local_DASP:
 
     def set_dasp_nodes(self):
         self.V_start = self.get_starter_nodes()
-        # print("V_start =", self.V_start)
         self.Vn = self.get_ds_customers()
-        # print("Vn = ", self.Vn)
         self.V_end = self.get_end_nodes()
-        # print("V_end =", self.V_end)
         self.get_outlier_nodes()
-        print("O = ", self.O)
 
         self.Vl.extend(self.V_start)
         self.Vl.extend(self.Vn)
@@ -97,7 +79,6 @@ class Local_DASP:
         self.V.extend(self.V_OS)
         self.V.extend(self.V_OE)
         self.V.extend(self.V_end)
-        # print("Nodes V: ", self.V)
 
     def set_nodes_index(self):
         self.V_index = range(len(self.V))
@@ -107,23 +88,17 @@ class Local_DASP:
         self.Vl_index = self.V_index[:vl_index]
         self.Vl_index = list(
             chain(self.Vl_index, self.V_index[vl_index + len(self.V_OS): vl_index + 2 * len(self.V_OS)]))
-        # print("Vl_indexes: ", self.Vl_index)
 
         vr_index = vl_index + len(self.V_OS)
         self.Vr_index = self.V_index[self.k: vr_index]
         self.Vr_index = list(
             chain(self.Vr_index, self.V_index[vr_index + len(self.V_OE):]))
-        # print("Vr_indexes: ", self.Vr_index)
 
         self.V_OS_index = self.V_index[vl_index:vl_index + len(self.V_OS)]
         self.V_OE_index = self.V_index[vr_index:vr_index + len(self.V_OE)]
-
         self.O_index = list(zip(self.V_OS_index, self.V_OE_index))
-        print("O_index: ", self.O_index)
 
         self.V_end_index = self.V_index[-self.k:]
-        # print("V_end_index: ", self.V_end_index)
-
         self.ds_dasp_index = self.k + len(self.Vn)
 
     def get_starter_nodes(self):
@@ -184,11 +159,8 @@ class Local_DASP:
         return end_nodes
 
     def solve(self):
-        # self.model.optimize(self.subtourelim)
-        # self.model.setParam('OutputFlag', 1)
         self.model.optimize()
         tuple_tours = self.getTupleTour()
-        # print("tuple_tours: ", tuple_tours)
         self.get_drone_deliveries()
 
         final_dasp_tours = []
@@ -206,13 +178,10 @@ class Local_DASP:
 
     def getTupleTour(self):
         tours = getTrucksTour(self.model)
-        print("Tours: ", tours)
         tuple_tours = []
         for (i, tour) in enumerate(tours):
-            print(f"tour: {tour} \n k = {self.V_index[i]}")
             tuples_tour = tourToTuple(tour, self.V_index[i])
             tuple_tours.append(tuples_tour)
-        # print(tuple_tours)
         return tuple_tours
 
     def plot_dasp_tours(self):
@@ -220,7 +189,6 @@ class Local_DASP:
         for (k, tour) in enumerate(tuple_tours):
             nodes_served_by_drone = [self.V[i] for (i, _) in tour] + [self.V[tour[-1][1]]]
             complete_tour = self.pre_dasp_nodes[k] + nodes_served_by_drone + self.post_dasp_nodes[k]
-            # print("ecco i tour completo dei nodi: ", complete_tour)
             plot_dasp_tour(complete_tour, self.milp_model.eps, self.V[self.ds_dasp_index], self.drone_to_customer)
 
     def get_drone_deliveries(self):
@@ -287,7 +255,6 @@ class Local_DASP:
         for k in self.K:
             for j in self.K:
                 if j != k:
-                    print(f"k = {k}, j ={j}")
                     constraint_name_1 = f"CC_k{k}_j{j}"
                     constraint_name_2 = f"CC2_k{k}_j{j}"
 
@@ -351,16 +318,16 @@ class Local_DASP:
         self.model.addConstr((gp.quicksum(gp.quicksum(self.x_k_ij[k, self.ds_dasp_index, j] for j in self.Vr_index
                                                       if j != self.ds_dasp_index) for k in self.K) == 1), name="(20.2)")
 
-        # # Constraint (21)
-        # self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index if i != oe)
-        #                                    for k in self.K) == 1 for (os, oe) in self.O_index), name="(21)")
-        # # Constraint (22)
-        # self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, oe, j] for j in self.Vr_index if j != os)
-        #                                    for k in self.K) == 1 for (os, oe) in self.O_index), name="(22)")
+        # Constraint (21)
+        self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index if i != oe)
+                                           for k in self.K) == 1 for (os, oe) in self.O_index), name="(21)")
+        # Constraint (22)
+        self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, oe, j] for j in self.Vr_index if j != os)
+                                           for k in self.K) == 1 for (os, oe) in self.O_index), name="(22)")
 
-        # Constraint (21-22)
-        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index if i != oe) - gp.quicksum(self.x_k_ij[k, oe, j] for j in self.Vr_index if j != os) == 0
-                                           for k in self.K for (os, oe) in self.O_index), name="(21-22)")
+        # # Constraint (21-22)
+        # self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index if i != oe) - gp.quicksum(self.x_k_ij[k, oe, j] for j in self.Vr_index if j != os) == 0
+        #                                    for k in self.K for (os, oe) in self.O_index), name="(21-22)")
 
         # Constraint (23)
         self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index) - self.x_k_ij[k, os, oe] == 0
