@@ -2,7 +2,7 @@
 
 Welcome to the GitHub repository for the mTSP-DS (Multiple Traveler Salesman Problem in Presence of Drone Stations) project. This project is based on the paper "The Multiple Traveling Salesman Problem in Presence of Drone- and Robot-Supported Packet Stations" by Konstantin Kloster, Mahdi Moeini, Daniele Vigo, and Oliver Wendt.
 
-This repository contains two main implementations:
+This repository contains two implementations:
 
 - **MILP Version**: A version of the problem implemented using MILP (Mixed Integer Linear Programming) to solve smaller problem instances.
 - **Matheuristic Version**: A matheuristic (a combined approach of exact and heuristic methods) for solving larger problem instances.
@@ -37,21 +37,29 @@ To run this project, you will need the following:
 
 ## Running the Code
 
-You can run the provided scripts to solve MTSP-DS problems:
+You can use the provided solvers to solve MTSP-DS problems. Both solvers can be imported and used within your Python scripts or notebooks:
 
-- **MILP Version**: Run the script `MTSP_DS_MILP_Solver.py` from the `src/` directory:
+- **MILP Version**: Import and use the `MTSP_DS_MILP_Solver` from the `src/` directory:
 
-    ```shell
-    python src/MTSP_DS_MILP_Solver.py
+    ```python
+    from src.MTSP_DS_MILP_Solver import MTSP_DS_MILP_Solver
+
+    # Example usage
+    solver = MTSP_DS_MILP_Solver(parameters)
+    result = solver.solve()
     ```
 
-- **Matheuristic Version**: Run the script `MTSP_DS_Matheuristic_Solver.py` from the `src/` directory:
+- **Matheuristic Version**: Import and use the `MTSP_DS_Matheuristic_Solver` from the `src/` directory:
 
-    ```shell
-    python src/MTSP_DS_Matheuristic_Solver.py
+    ```python
+    from src.MTSP_DS_Matheuristic_Solver import MTSP_DS_Matheuristic_Solver
+
+    # Example usage
+    solver = MTSP_DS_Matheuristic_Solver(parameters)
+    result = solver.solve()
     ```
 
-Adjust the parameters in the script files as needed to match your problem instances.
+Additionally, there are Python notebooks available for sensitivity analysis of the parameters `n` (number of customers) and `m` (number of drone stations). These notebooks can be found in the `sensitivity_analysis/` directory and provide a detailed analysis and visualization of the solver's performance under different configurations.
 
 ## Contributing
 
