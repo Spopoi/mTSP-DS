@@ -66,7 +66,6 @@ def get_locations(dataset_name='A', instance_number=0):
     dataset = get_dataset()
     instance = dataset[dataset_name][instance_number]
     coordinates = instance['coordinates']
-    # print("COOORDINATE: ", coordinates)
     locations = []
     for coordinate in coordinates:
         locations.append(Location(coordinate[0], coordinate[1]))

@@ -105,7 +105,6 @@ def getTupleTour(model):
 def plotTours(model, v, eps):
     tuple_tours = getTupleTour(model)
     drone_deliveries = get_customer_drone_edges(model)
-    # print("drone deliveries: ", drone_deliveries)
     for tour in tuple_tours:
         drone_deliveries_from_s = []
         for i, _ in tour:

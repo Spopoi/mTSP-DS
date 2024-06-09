@@ -125,7 +125,6 @@ class Local_DASP:
                     cost_to_start_i += node.node_distance(self.tours[i][j - 1])
             if self.tours[i] not in self.dasp_tours:
                 self.dasp_solution["tours"].append(self.tours[i])
-                # TODO: add value
         return starter_nodes
 
     def get_ds_customers(self):
@@ -165,14 +164,11 @@ class Local_DASP:
 
         final_dasp_tours = []
         for i, tour in enumerate(tuple_tours):
-            # print(f"tour {tour} pre: {self.pre_dasp_nodes[i]} post: {self.post_dasp_nodes[i]}")
             final_dasp_tours.append(self.pre_dasp_nodes[i] + [self.V[t[0]] for t in tour] + [self.V[tour[-1][1]]] + self.post_dasp_nodes[i])
-        # print("dasp_modified_tours", final_dasp_tours)
+
         self.dasp_solution["tours"].extend(final_dasp_tours)
-        # self.dasp_solution["assigned_customers"].extend(assigned_customers)
         self.dasp_solution["assigned_customers"] = self.assigned_customers
         self.dasp_solution["value"] = self.getSolution()
-        # plotTours(self.model, self.V, self.milp_model.eps)
         self.plot_dasp_tours()
         return self.dasp_solution
 
@@ -232,26 +228,21 @@ class Local_DASP:
     def init_model(self):
         self.model = gp.Model("Local_DASP")
 
-        # DECISION VARIABLES
-        # Makespan
-        self.tau_tilde = self.model.addVar(vtype=GRB.CONTINUOUS, name="tau_tilde")
+        self.set_decision_variables()
 
-        x_k_ij_indexes = [(k, i, j) for k in self.K for i in self.Vl_index for j in self.Vr_index]
-        x_k_ij_indexes += [(k, i, j) for k in self.K for (i, j) in self.O_index]
-
-        self.x_k_ij = self.model.addVars(x_k_ij_indexes, vtype=GRB.BINARY, name="x_k_ij")
-
-        # time truck k arrives at node i
-        self.a_ki = self.model.addVars([(i, j) for i in self.K for j in self.V_index],
-                                       vtype=GRB.CONTINUOUS, name="a_ki")
-        # customer j served by drone d from drone station s
-        self.y_d_j = self.model.addVars([(d, j) for d in self.milp_model.D for j in self.Vn_index],
-                                        vtype=GRB.BINARY, name="y_d_j")
-
+        self.model.setObjective(self.tau_tilde, sense=GRB.MINIMIZE)
         self.model.update()
 
+        self.set_model_constraints()
+        self.model.write("modello_matheuristic.lp")
+        self.model._edges = self.x_k_ij
+        self.model._vars = self.model.getVars()
+        self.model.setParam('OutputFlag', 0)
+        self.model.Params.lazyConstraints = 1
+
+    def set_model_constraints(self):
+        # CONSTRAINTS
         # Constraint (custom)
-        print(self.K)
         for k in self.K:
             for j in self.K:
                 if j != k:
@@ -266,82 +257,59 @@ class Local_DASP:
                         gp.quicksum(self.x_k_ij[k, i, self.V_end_index[j - 1]] for i in self.Vl_index) == 0,
                         name=constraint_name_2
                     )
-
-        self.model.addConstrs(self.x_k_ij[k, i, j] == 0 for i in self.Vl_index for j in self.Vr_index if i == j for k in self.K)
-        # Constraint (custom: ds_flow_balance)
-        # self.model.addConstrs(((gp.quicksum(self.x_k_ij[k, i, self.ds_dasp_index] for i in self.Vl_index
-        #                                     if i != self.ds_dasp_index) == gp.quicksum(
-        #     self.x_k_ij[k, self.ds_dasp_index, j]
-        #     for j in self.Vr_index if j != self.ds_dasp_index)) for k in self.K), name="ds_flow_balance")
-
-        self.model.setObjective(self.tau_tilde, sense=GRB.MINIMIZE)
-        self.model.update()
-        # CONSTRAINTS
+        self.model.addConstrs(
+            self.x_k_ij[k, i, j] == 0 for i in self.Vl_index for j in self.Vr_index if i == j for k in self.K)
         # Constraint (16)
         end_k = self.k + len(self.Vn) + 2 * len(self.O)
-        # print("V = ", self.V)
         self.model.addConstrs((self.a_ki[k, end_k + k] <= self.tau_tilde for k in self.K), name="(16)")
-
         # Constraint (17)
         self.model.addConstrs((self.a_ki[k, self.ds_dasp_index] + gp.quicksum(
             2 * self.milp_model.t_ij_drone[self.d_station, self.V[j].index] * self.y_d_j[d, j] for j in self.Vn_index)
                                <= self.tau_tilde for k in self.K for d in self.milp_model.D), name="(17)")
-
         # Constraint (18)
         self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, i, j] for i in self.Vl_index if i != j)
                                            for k in self.K) + gp.quicksum(self.y_d_j[d, j] for d in self.milp_model.D)
                                == 1 for j in self.Vn_index), name="(18)")
-
         # Constraint (19.1)
         second_step_node_indexes = []
         next_to_last_node_indexes = []
         for k in self.K:
-            second_step_indexes = list(chain(self.Vn_index, [self.ds_dasp_index], self.V_OS_index, [self.V_end_index[k-1]]))
+            second_step_indexes = list(
+                chain(self.Vn_index, [self.ds_dasp_index], self.V_OS_index, [self.V_end_index[k - 1]]))
             second_step_node_indexes.append(second_step_indexes)
 
-            next_to_last_indexes = list(chain(self.Vn_index, [self.ds_dasp_index], self.V_OE_index, [self.V_index[k-1]]))
+            next_to_last_indexes = list(
+                chain(self.Vn_index, [self.ds_dasp_index], self.V_OE_index, [self.V_index[k - 1]]))
             next_to_last_node_indexes.append(next_to_last_indexes)
-
-        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, k - 1, j] for j in second_step_node_indexes[k-1]) == 1
+        self.model.addConstrs((gp.quicksum(self.x_k_ij[k, k - 1, j] for j in second_step_node_indexes[k - 1]) == 1
                                for k in self.K), name="(19.1)")
-
         # Constraint (19.2)
         self.model.addConstrs(
-            (gp.quicksum(self.x_k_ij[k, i, self.V_end_index[k - 1]] for i in next_to_last_node_indexes[k-1]) == 1 for k in
+            (gp.quicksum(self.x_k_ij[k, i, self.V_end_index[k - 1]] for i in next_to_last_node_indexes[k - 1]) == 1 for
+             k in
              self.K), name="(19.2)")
-
         # Constraint (20.1)
         self.model.addConstr((gp.quicksum(gp.quicksum(self.x_k_ij[k, i, self.ds_dasp_index] for i in self.Vl_index
                                                       if i != self.ds_dasp_index) for k in self.K) == 1), name="(20.1)")
-
         # Constraint (20.2)
         self.model.addConstr((gp.quicksum(gp.quicksum(self.x_k_ij[k, self.ds_dasp_index, j] for j in self.Vr_index
                                                       if j != self.ds_dasp_index) for k in self.K) == 1), name="(20.2)")
-
         # Constraint (21)
         self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index if i != oe)
                                            for k in self.K) == 1 for (os, oe) in self.O_index), name="(21)")
         # Constraint (22)
         self.model.addConstrs((gp.quicksum(gp.quicksum(self.x_k_ij[k, oe, j] for j in self.Vr_index if j != os)
                                            for k in self.K) == 1 for (os, oe) in self.O_index), name="(22)")
-
-        # # Constraint (21-22)
-        # self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index if i != oe) - gp.quicksum(self.x_k_ij[k, oe, j] for j in self.Vr_index if j != os) == 0
-        #                                    for k in self.K for (os, oe) in self.O_index), name="(21-22)")
-
         # Constraint (23)
         self.model.addConstrs((gp.quicksum(self.x_k_ij[k, i, os] for i in self.Vl_index) - self.x_k_ij[k, os, oe] == 0
                                for k in self.K for (os, oe) in self.O_index), name="(23)")
-
         # Constraint (24)
         self.model.addConstrs(
             (gp.quicksum(self.x_k_ij[k, i, h] for i in self.Vl_index if i != h) -
              gp.quicksum(self.x_k_ij[k, h, j] for j in self.Vr_index if j != h) == 0
              for k in self.K for h in self.Vn_index), name="(24)")
-
         # Constraint (25)
         self.model.addConstrs((self.cost_to_start_k[k - 1] == self.a_ki[k, k - 1] for k in self.K), name="(25)")
-
         # Constraint (26)
         M = 10000
         earliest_arrival_time_set = list(chain(self.Vn_index, [self.ds_dasp_index], self.V_OS_index))
@@ -349,25 +317,32 @@ class Local_DASP:
                                + self.milp_model.t_ij[self.V[i].index, self.V[j].index] <= self.a_ki[k, j]
                                for k in self.K for i in self.Vl_index for j in earliest_arrival_time_set if i != j)
                               , name="(26)")
-
         # Constraint (27)
         self.model.addConstrs((M * (self.x_k_ij[k, os, oe] - 1) + self.a_ki[k, os]
                                + self.traversal_cost(os, oe) <= self.a_ki[k, oe] for k in self.K
                                for (os, oe) in self.O_index), name="(27)")
-
         cost_after_end_k = self.cost_after_end_k(end_k)
         # Constraint (28)
         self.model.addConstrs((M * (self.x_k_ij[k, i, end_k + k] - 1) + self.a_ki[k, i] + self.milp_model.t_ij[
             self.V[i].index, self.V[end_k + k].index]
                                + cost_after_end_k[k - 1] <= self.a_ki[k, end_k + k] for k in self.K
                                for i in self.Vl_index), name="(28)")
-
         self.model.update()
-        self.model.write("modello_matheuristic.lp")
-        self.model._edges = self.x_k_ij
-        self.model._vars = self.model.getVars()
-        self.model.setParam('OutputFlag', 0)
-        self.model.Params.lazyConstraints = 1
+
+    def set_decision_variables(self):
+        # DECISION VARIABLES
+        # Makespan
+        self.tau_tilde = self.model.addVar(vtype=GRB.CONTINUOUS, name="tau_tilde")
+        x_k_ij_indexes = [(k, i, j) for k in self.K for i in self.Vl_index for j in self.Vr_index]
+        x_k_ij_indexes += [(k, i, j) for k in self.K for (i, j) in self.O_index]
+        self.x_k_ij = self.model.addVars(x_k_ij_indexes, vtype=GRB.BINARY, name="x_k_ij")
+        # time truck k arrives at node i
+        self.a_ki = self.model.addVars([(i, j) for i in self.K for j in self.V_index],
+                                       vtype=GRB.CONTINUOUS, name="a_ki")
+        # customer j served by drone d from drone station s
+        self.y_d_j = self.model.addVars([(d, j) for d in self.milp_model.D for j in self.Vn_index],
+                                        vtype=GRB.BINARY, name="y_d_j")
+        self.model.update()
 
     def subtourelim(self, model, where):
         if where == GRB.Callback.MIPSOL:
@@ -376,11 +351,7 @@ class Local_DASP:
             x_k_ij = model._edges
             for truck_tour in tours:
                 node_indexes = getVisitedNodesIndex(truck_tour)
-                print(f"Truck tour: {truck_tour}")
-                print("node_indexes", node_indexes)
-                # num_of_dasp_tours = len(self.dasp_tours)
                 sub_tours_indexes = generate_sub_tours_indexes(node_indexes[1:-1])
-                print("sub_tours_indexes", sub_tours_indexes)
                 # Constraint (13)
                 for S in sub_tours_indexes:
                     model.cbLazy(
