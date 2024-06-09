@@ -9,6 +9,7 @@ from TourUtils import getVisitedNodesIndex, generate_sub_tours_indexes, getTruck
 
 class Local_DASP:
     def __init__(self, model, solution, d_station):
+
         self.drone_to_customer = []
         self.milp_model = model
         self.tours = solution["tours"]
@@ -23,6 +24,7 @@ class Local_DASP:
         self.cost_to_start_k = []
         self.pre_dasp_nodes = []
         self.post_dasp_nodes = []
+        self.tuple_tours = None
 
         self.V_start = None
         self.Vn = None
@@ -159,11 +161,11 @@ class Local_DASP:
 
     def solve(self):
         self.model.optimize()
-        tuple_tours = self.getTupleTour()
+        self.tuple_tours = self.getTupleTour()
         self.get_drone_deliveries()
 
         final_dasp_tours = []
-        for i, tour in enumerate(tuple_tours):
+        for i, tour in enumerate(self.tuple_tours):
             final_dasp_tours.append(self.pre_dasp_nodes[i] + [self.V[t[0]] for t in tour] + [self.V[tour[-1][1]]] + self.post_dasp_nodes[i])
 
         self.dasp_solution["tours"].extend(final_dasp_tours)
@@ -181,8 +183,7 @@ class Local_DASP:
         return tuple_tours
 
     def plot_dasp_tours(self):
-        tuple_tours = self.getTupleTour()
-        for (k, tour) in enumerate(tuple_tours):
+        for (k, tour) in enumerate(self.tuple_tours):
             nodes_served_by_drone = [self.V[i] for (i, _) in tour] + [self.V[tour[-1][1]]]
             complete_tour = self.pre_dasp_nodes[k] + nodes_served_by_drone + self.post_dasp_nodes[k]
             plot_dasp_tour(complete_tour, self.milp_model.eps, self.V[self.ds_dasp_index], self.drone_to_customer)
@@ -242,23 +243,6 @@ class Local_DASP:
 
     def set_model_constraints(self):
         # CONSTRAINTS
-        # Constraint (custom)
-        for k in self.K:
-            for j in self.K:
-                if j != k:
-                    constraint_name_1 = f"CC_k{k}_j{j}"
-                    constraint_name_2 = f"CC2_k{k}_j{j}"
-
-                    self.model.addConstr(
-                        gp.quicksum(self.x_k_ij[k, self.V_index[j - 1], i] for i in self.Vr_index) == 0,
-                        name=constraint_name_1
-                    )
-                    self.model.addConstr(
-                        gp.quicksum(self.x_k_ij[k, i, self.V_end_index[j - 1]] for i in self.Vl_index) == 0,
-                        name=constraint_name_2
-                    )
-        self.model.addConstrs(
-            self.x_k_ij[k, i, j] == 0 for i in self.Vl_index for j in self.Vr_index if i == j for k in self.K)
         # Constraint (16)
         end_k = self.k + len(self.Vn) + 2 * len(self.O)
         self.model.addConstrs((self.a_ki[k, end_k + k] <= self.tau_tilde for k in self.K), name="(16)")
@@ -327,6 +311,25 @@ class Local_DASP:
             self.V[i].index, self.V[end_k + k].index]
                                + cost_after_end_k[k - 1] <= self.a_ki[k, end_k + k] for k in self.K
                                for i in self.Vl_index), name="(28)")
+
+        # Constraint (custom)
+        for k in self.K:
+            for j in self.K:
+                if j != k:
+                    constraint_name_1 = f"CC_k{k}_j{j}"
+                    constraint_name_2 = f"CC2_k{k}_j{j}"
+
+                    self.model.addConstr(
+                        gp.quicksum(self.x_k_ij[k, self.V_index[j - 1], i] for i in self.Vr_index) == 0,
+                        name=constraint_name_1
+                    )
+                    self.model.addConstr(
+                        gp.quicksum(self.x_k_ij[k, i, self.V_end_index[j - 1]] for i in self.Vl_index) == 0,
+                        name=constraint_name_2
+                    )
+        self.model.addConstrs(
+            self.x_k_ij[k, i, j] == 0 for i in self.Vl_index for j in self.Vr_index if i == j for k in self.K)
+
         self.model.update()
 
     def set_decision_variables(self):
