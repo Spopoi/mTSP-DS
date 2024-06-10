@@ -58,11 +58,16 @@ You can use the provided solvers to solve MTSP-DS problems. Both solvers can be 
     solver = MTSP_DS_Matheuristic_Solver(parameters)
     result = solver.solve()
     ```
+
 Additionally, there are Python notebooks available for detailed analysis:
 
 - **Scalability Analysis for `n` (number of customers)**: Located in the `optimization_analysis/` directory.
 - **Sensitivity Analysis for `m` (number of drone stations)**: Located in the `optimization_analysis/` directory.
 - **Comparison between mTSP and mTSP-DS**: This notebook, also located in the `optimization_analysis/` directory, provides a comparison between the traditional Multiple Traveling Salesman Problem (mTSP) and the mTSP-DS variant.
+
+## Project Presentation
+
+There is also a PDF file containing presentation slides of the project available in the repository. You can find it [here](presentation.pdf).
 
 ## Contributing
 
