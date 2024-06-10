@@ -60,9 +60,9 @@ You can use the provided solvers to solve MTSP-DS problems. Both solvers can be 
     ```
 Additionally, there are Python notebooks available for detailed analysis:
 
-- **Sensitivity Analysis for `n` (number of customers)**: Located in the `sensitivity_analysis/` directory.
-- **Sensitivity Analysis for `m` (number of drone stations)**: Located in the `sensitivity_analysis/` directory.
-- **Comparison between mTSP and mTSP-DS**: This notebook, also located in the `sensitivity_analysis/` directory, provides a comparison between the traditional Multiple Traveling Salesman Problem (mTSP) and the mTSP-DS variant.
+- **Scalability Analysis for `n` (number of customers)**: Located in the `optimization_analysis/` directory.
+- **Sensitivity Analysis for `m` (number of drone stations)**: Located in the `optimization_analysis/` directory.
+- **Comparison between mTSP and mTSP-DS**: This notebook, also located in the `optimization_analysis/` directory, provides a comparison between the traditional Multiple Traveling Salesman Problem (mTSP) and the mTSP-DS variant.
 
 ## Contributing
 
